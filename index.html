@@ -4,35 +4,40 @@
     <meta charset="utf-8">
     <title>Radar</title>
     <style>
-        body {
-            /* Ancho ajustado a 700px para el centro perfecto */
-            width: 700px; 
-            height: 600px;
+        /* Candado anti-scroll absoluto */
+        html, body {
+            width: 100%;
+            height: 100%;
             margin: 0;
             padding: 0;
             background-color: #FFFFFF;
-            color: #000000;
-            font-family: sans-serif;
-            
+            overflow: hidden !important; /* Prohíbe las barras de scroll */
+        }
+        
+        /* Contenedor que rota en lugar de rotar todo el body */
+        #screen {
+            width: 720px; /* Ancho ideal descontando la barra del Kindle */
+            height: 600px;
             position: absolute;
             top: 0;
             left: 600px;
             -webkit-transform: rotate(90deg);
             -webkit-transform-origin: 0 0;
-            
+            color: #000000;
+            font-family: sans-serif;
             text-align: center;
-            overflow: hidden;
+            box-sizing: border-box;
         }
         
-        #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; }
+        #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; z-index: 10; }
         .hidden { display: none !important; }
         
-        /* Aumenté un poco el padding-top para empujar todo hacia el centro */
-        .box { padding-top: 40px; box-sizing: border-box; height: 600px; }
+        .box { padding-top: 40px; box-sizing: border-box; height: 600px; width: 100%; }
         
-        .title-container { margin-top: 10px; white-space: nowrap; }
-        .huge { font-size: 110px; font-weight: bold; display: inline-block; vertical-align: middle; margin: 0; }
-        .arrow { font-size: 90px; display: inline-block; vertical-align: middle; margin-left: 20px; font-weight: normal; }
+        .title-container { margin-top: 10px; white-space: nowrap; width: 100%; text-align: center; }
+        /* Letra apenas más chica para que entre todo en la pantalla */
+        .huge { font-size: 85px; font-weight: bold; display: inline-block; vertical-align: middle; margin: 0; }
+        .arrow { font-size: 75px; display: inline-block; vertical-align: middle; margin-left: 15px; font-weight: normal; }
         
         .big { font-size: 40px; margin: 10px 0 35px 0; }
         
@@ -40,40 +45,40 @@
         .med { display: inline-block; width: 32%; font-size: 20px; vertical-align: top; color: #333; }
         .med b { font-size: 42px; display: block; margin-top: 5px; color: #000; }
 
-        /* Nueva caja gigante para el ETA abajo de todo */
-        .eta-box { margin-top: 50px; }
-        .eta-label { font-size: 26px; color: #333; letter-spacing: 2px; }
+        .eta-box { margin-top: 40px; }
+        .eta-label { font-size: 24px; color: #333; letter-spacing: 2px; }
         .eta-value { font-size: 80px; font-weight: bold; margin-top: 5px; }
         
     </style>
 </head>
 <body>
-    <div id="debug"></div>
-    
-    <div id="status-bar" class="big" style="margin-top: 250px;">INITIALIZING...</div>
-
-    <div id="view-clearsky" class="hidden box">
-        <div class="huge" style="margin-top: 100px; font-size: 90px;">CLEAR SKY</div>
-        <div class="big" style="margin-top: 60px;">Next flight at <span id="next-dist">--</span> km</div>
-    </div>
-
-    <div id="view-flight" class="hidden box">
-        <div class="title-container">
-            <span id="callsign" class="huge">✈ ---</span>
-            <span id="track-arrow" class="arrow">↑</span>
-        </div>
-        <div id="airline" class="big">---</div>
+    <div id="screen">
+        <div id="debug"></div>
         
-        <div class="data-container">
-            <div class="med">ALTITUDE<b id="alt">--</b></div>
-            <div class="med">SPEED<b id="spd">--</b></div>
-            <div class="med">DISTANCE<b id="dist">--</b></div>
+        <div id="status-bar" class="big" style="margin-top: 250px;">INITIALIZING...</div>
+
+        <div id="view-clearsky" class="hidden box">
+            <div class="huge" style="margin-top: 100px; font-size: 90px;">CLEAR SKY</div>
+            <div class="big" style="margin-top: 60px;">Next flight at <span id="next-dist">--</span> km</div>
         </div>
 
-        <!-- El nuevo bloque de ETA -->
-        <div class="eta-box">
-            <div class="eta-label">ETA (OVERHEAD)</div>
-            <div id="eta" class="eta-value">--</div>
+        <div id="view-flight" class="hidden box">
+            <div class="title-container">
+                <span id="callsign" class="huge">✈ ---</span>
+                <span id="track-arrow" class="arrow">↑</span>
+            </div>
+            <div id="airline" class="big">---</div>
+            
+            <div class="data-container">
+                <div class="med">ALTITUDE<b id="alt">--</b></div>
+                <div class="med">SPEED<b id="spd">--</b></div>
+                <div class="med">DISTANCE<b id="dist">--</b></div>
+            </div>
+
+            <div class="eta-box">
+                <div class="eta-label">ETA (OVERHEAD)</div>
+                <div id="eta" class="eta-value">--</div>
+            </div>
         </div>
     </div>
 
@@ -254,17 +259,16 @@
             var spdKmH = plane.gs ? (plane.gs * 1.852) : null;
             var spd = spdKmH !== null ? Math.round(spdKmH) + ' km/h' : '---';
             
-            // Cálculo del ETA
             var etaText = '---';
-            if (spdKmH !== null && spdKmH > 20) { // Ignoramos si va a menos de 20 km/h (carreteando)
-                var etaMin = (distance / spdKmH) * 60; // (km / km/h) * 60 = minutos
+            if (spdKmH !== null && spdKmH > 20) { 
+                var etaMin = (distance / spdKmH) * 60;
                 if (etaMin < 1) {
                     etaText = '< 1 min';
                 } else {
                     etaText = Math.round(etaMin) + ' min';
                 }
             } else if (spdKmH !== null && spdKmH <= 20) {
-                etaText = 'N/A'; // Demasiado lento para calcular
+                etaText = 'N/A';
             }
 
             var track = plane.track;
@@ -274,7 +278,7 @@
             altEl.innerText = alt;
             spdEl.innerText = spd;
             distEl.innerText = distance.toFixed(1) + ' km';
-            etaEl.innerText = etaText; // Inyectamos el tiempo estimado
+            etaEl.innerText = etaText;
             trackArrowEl.innerText = getDirectionArrow(track);
         }
 
