@@ -5,7 +5,6 @@
     <title>Radar</title>
     <style>
         body {
-            /* Resolución exacta del Kindle 8va Gen acostado */
             width: 800px;
             height: 600px;
             margin: 0;
@@ -14,7 +13,6 @@
             color: #000000;
             font-family: sans-serif;
             
-            /* Rotación a prueba de tontos */
             position: absolute;
             top: 0;
             left: 600px;
@@ -25,49 +23,47 @@
             overflow: hidden;
         }
         
-        #debug { font-size: 20px; color: #000; padding: 10px; }
+        #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; }
         .hidden { display: none !important; }
         
-        .box { padding-top: 80px; }
-        .huge { font-size: 100px; font-weight: bold; margin-bottom: 20px; }
-        .big { font-size: 45px; }
+        .box { padding-top: 30px; box-sizing: border-box; height: 600px; }
         
-        .data-container { margin-top: 50px; }
-        .med { font-size: 30px; margin: 0 30px; display: inline-block; vertical-align: top; }
-        .med b { font-size: 50px; display: block; margin-top: 10px; }
+        .title-container { margin-top: 10px; white-space: nowrap; }
+        .huge { font-size: 110px; font-weight: bold; display: inline-block; vertical-align: middle; margin: 0; }
+        .arrow { font-size: 90px; display: inline-block; vertical-align: middle; margin-left: 20px; font-weight: normal; }
         
-        .arrow { font-size: 120px; margin-top: 30px; line-height: 1; }
+        .big { font-size: 40px; margin: 10px 0 35px 0; }
+        
+        .data-container { margin-top: 30px; width: 100%; white-space: nowrap; }
+        .med { display: inline-block; width: 32%; font-size: 22px; vertical-align: top; color: #333; }
+        .med b { font-size: 45px; display: block; margin-top: 5px; color: #000; }
+        
     </style>
 </head>
 <body>
-    <!-- Consola de errores visible por si falla algo -->
     <div id="debug"></div>
     
-    <div id="status-bar" class="big" style="margin-top: 200px;">INICIANDO...</div>
+    <div id="status-bar" class="big" style="margin-top: 250px;">INITIALIZING...</div>
 
     <div id="view-clearsky" class="hidden box">
-        <div class="huge">CIELO<br>DESPEJADO</div>
-        <div class="big" style="margin-top:60px">Próximo a <span id="next-dist">--</span> km</div>
+        <div class="huge" style="margin-top: 100px; font-size: 90px;">CLEAR SKY</div>
+        <div class="big" style="margin-top: 60px;">Next flight at <span id="next-dist">--</span> km</div>
     </div>
 
     <div id="view-flight" class="hidden box">
-        <div id="callsign" class="huge">---</div>
+        <div class="title-container">
+            <span id="callsign" class="huge">---</span>
+            <span id="track-arrow" class="arrow">↑</span>
+        </div>
         <div id="airline" class="big">---</div>
         <div class="data-container">
-            <div class="med">ALTITUD<b id="alt">--</b></div>
-            <div class="med">VELOCIDAD<b id="spd">--</b></div>
-            <div class="med">DISTANCIA<b id="dist">--</b></div>
+            <div class="med">ALTITUDE<b id="alt">--</b></div>
+            <div class="med">SPEED<b id="spd">--</b></div>
+            <div class="med">DISTANCE<b id="dist">--</b></div>
         </div>
-        <div id="track-arrow" class="arrow">↑</div>
     </div>
 
     <script>
-        // Detector de errores que imprime el fallo en la pantalla del Kindle
-        window.onerror = function(msg, url, line) {
-            document.getElementById('debug').innerHTML = 'Error JS: ' + msg + ' (L: ' + line + ')';
-            return false;
-        };
-
         var USER_LAT = -34.53;
         var USER_LON = -58.49;
         var API_URL = '/api/vuelos';
@@ -75,6 +71,7 @@
         var statusBar = document.getElementById('status-bar');
         var viewClearSky = document.getElementById('view-clearsky');
         var viewFlight = document.getElementById('view-flight');
+        var debugEl = document.getElementById('debug');
 
         var nextDistEl = document.getElementById('next-dist');
         var callsignEl = document.getElementById('callsign');
@@ -83,6 +80,10 @@
         var spdEl = document.getElementById('spd');
         var distEl = document.getElementById('dist');
         var trackArrowEl = document.getElementById('track-arrow');
+
+        // Memoria de distancias y estados
+        var previousDistances = {};
+        var planeStates = {}; 
 
         var airlines = {
             'ARG': 'Aerolíneas Argentinas',
@@ -122,10 +123,10 @@
         }
 
         function getAirline(callsign) {
-            if (!callsign) return 'VUELO NO IDENTIFICADO';
+            if (!callsign) return 'UNIDENTIFIED FLIGHT';
             var clean = callsign.trim();
             var code3 = clean.substring(0, 3).toUpperCase();
-            return airlines[code3] || 'VUELO COMERCIAL';
+            return airlines[code3] || 'COMMERCIAL FLIGHT';
         }
 
         function fetchData() {
@@ -136,13 +137,16 @@
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         var data = JSON.parse(xhr.responseText);
-                        statusBar.className = 'hidden'; // Ocultamos el INICIANDO
+                        statusBar.className = 'hidden'; 
+                        debugEl.innerHTML = ''; 
                         
                         if (!data || !data.ac || data.ac.length === 0) {
                             showClearSky('--');
                             return;
                         }
 
+                        var currentDistances = {};
+                        var currentStates = {};
                         var closestFlight = null;
                         var minDistance = Infinity;
 
@@ -150,12 +154,48 @@
                             var plane = data.ac[i];
                             if (plane.lat && plane.lon) {
                                 var dist = getHaversineDistance(USER_LAT, USER_LON, plane.lat, plane.lon);
-                                if (dist < minDistance) {
+                                var planeId = (plane.flight || plane.hex || 'UNK').trim();
+                                
+                                currentDistances[planeId] = dist;
+                                
+                                // Recuperamos el estado anterior o creamos uno nuevo
+                                var stateObj = planeStates[planeId] || { phase: 'UNKNOWN', graceTicks: 0 };
+
+                                if (previousDistances[planeId] !== undefined) {
+                                    // Margen de 0.05km para evitar errores del GPS
+                                    if (dist > previousDistances[planeId] + 0.05) {
+                                        if (stateObj.phase === 'APPROACHING') {
+                                            // ¡Recién nos pasó por encima! Le damos 1 minuto de gracia (6 ticks de 10s)
+                                            stateObj.phase = 'LEAVING';
+                                            stateObj.graceTicks = 6;
+                                        } else if (stateObj.phase === 'LEAVING') {
+                                            // Se sigue alejando, le restamos tiempo de gracia
+                                            if (stateObj.graceTicks > 0) stateObj.graceTicks--;
+                                        } else {
+                                            // Apareció de la nada y ya se está alejando (ej. despegue de Aeroparque)
+                                            stateObj.phase = 'LEAVING';
+                                            stateObj.graceTicks = 0;
+                                        }
+                                    } else if (dist < previousDistances[planeId] - 0.05) {
+                                        // Se está acercando
+                                        stateObj.phase = 'APPROACHING';
+                                    }
+                                }
+                                
+                                currentStates[planeId] = stateObj;
+
+                                // ¿Es elegible para mostrarse en pantalla?
+                                var isEligible = (stateObj.phase === 'APPROACHING' || stateObj.phase === 'UNKNOWN' || (stateObj.phase === 'LEAVING' && stateObj.graceTicks > 0));
+
+                                if (isEligible && dist < minDistance) {
                                     minDistance = dist;
                                     closestFlight = plane;
                                 }
                             }
                         }
+
+                        previousDistances = currentDistances;
+                        planeStates = currentStates; // Limpiamos aviones viejos de la memoria
 
                         if (closestFlight) {
                             if (minDistance < 20) {
@@ -167,15 +207,15 @@
                             showClearSky('--');
                         }
                     } catch (e) {
-                        document.getElementById('debug').innerHTML = 'Error parseando datos';
+                        debugEl.innerHTML = 'Data parse error';
                     }
                 } else {
-                    document.getElementById('debug').innerHTML = 'Reconectando...';
+                    debugEl.innerHTML = 'Reconnecting...';
                 }
             };
 
             xhr.onerror = function() {
-                document.getElementById('debug').innerHTML = 'Sin conexión al radar';
+                debugEl.innerHTML = 'Reconnecting...';
             };
 
             xhr.send();
@@ -192,8 +232,18 @@
             viewFlight.className = 'box';
 
             var callsign = (plane.flight || '---').trim();
+            
             var altFt = plane.alt_baro || plane.alt_geom;
-            var alt = altFt ? (altFt <= 0 ? 'En tierra' : Math.round(altFt * 0.3048) + ' m') : '---';
+            var alt = '---';
+            if (altFt === 'ground') {
+                alt = 'On ground';
+            } else if (altFt !== null && altFt !== undefined) {
+                var numericAlt = parseFloat(altFt);
+                if (!isNaN(numericAlt)) {
+                    alt = numericAlt <= 0 ? 'On ground' : Math.round(numericAlt * 0.3048) + ' m';
+                }
+            }
+
             var spd = plane.gs ? Math.round(plane.gs * 1.852) + ' km/h' : '---';
             var track = plane.track;
 
