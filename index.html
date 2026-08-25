@@ -149,11 +149,13 @@
             'SKU': 'Sky Airline'
         };
 
+        // --- RELOJ FORZADO A BUENOS AIRES ---
         function updateClock() {
             var d = new Date();
-            var h = d.getHours();
-            var m = d.getMinutes();
-            var timeStr = (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
+            // Forzamos la zona horaria de Argentina sin importar la hora del sistema del Kindle
+            var options = { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit', hour12: false };
+            var timeStr = d.toLocaleTimeString('es-AR', options);
+            
             var clocks = document.getElementsByClassName('clock-display');
             for(var i = 0; i < clocks.length; i++) {
                 clocks[i].innerText = timeStr;
