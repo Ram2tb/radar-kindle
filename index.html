@@ -2,65 +2,384 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Test de Fuentes</title>
+    <title>Radar</title>
+    <!-- Importamos FontAwesome para íconos vectoriales profesionales -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        html, body { 
-            width: 100%; height: 100%; margin: 0; padding: 0; 
-            background: #FFF; color: #000; overflow: hidden; 
-        }
+        html { overflow: hidden !important; margin: 0; padding: 0; background: #FFF; }
         
-        #screen {
+        body {
             width: 720px; 
             height: 580px;
+            margin: 0;
+            padding: 0;
+            background-color: #FFFFFF;
+            color: #000000;
+            /* Forzamos Helvetica / Arial limpia */
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            
             position: absolute;
             top: 0;
             left: 600px;
             -webkit-transform: rotate(90deg);
             -webkit-transform-origin: 0 0;
-            padding: 40px;
-            box-sizing: border-box;
-            text-align: left;
+            
+            text-align: center;
+            overflow: hidden;
         }
-
-        .title { font-family: sans-serif; font-size: 40px; font-weight: bold; margin-bottom: 40px; border-bottom: 2px solid #000; }
         
-        .test-row { font-size: 55px; margin-bottom: 25px; white-space: nowrap; }
-        .label { font-size: 18px; display: inline-block; width: 150px; vertical-align: middle; font-family: sans-serif; color: #666; line-height: 1.2; }
+        #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; z-index: 10; }
+        .hidden { display: none !important; }
+        
+        .box { padding-top: 30px; box-sizing: border-box; width: 100%; }
+        
+        .title-container { margin-top: 10px; white-space: nowrap; width: 100%; }
+        .huge { font-size: 85px; font-weight: bold; display: inline-block; vertical-align: middle; margin: 0; }
+        
+        /* Ajuste para el ícono de FontAwesome del avión */
+        .huge i { font-size: 70px; margin-right: 15px; vertical-align: middle; }
+        
+        /* Flecha de dirección (ahora usamos un ícono de flecha rotado o directo) */
+        .arrow { font-size: 70px; display: inline-block; vertical-align: middle; margin-left: 15px; }
+        
+        .big { font-size: 40px; margin: 10px 0 30px 0; font-weight: bold; }
+        
+        .data-container { margin-top: 20px; width: 90%; margin-left: 5%; white-space: nowrap; }
+        .med { display: inline-block; width: 32%; font-size: 20px; vertical-align: top; color: #333; font-weight: bold; }
+        .med b { font-size: 42px; display: block; margin-top: 5px; color: #000; }
+
+        .bottom-container { margin-top: 40px; width: 96%; margin-left: 2%; white-space: nowrap; }
+        .bottom-item { display: inline-block; width: 48%; vertical-align: top; }
+        .bottom-label { font-size: 24px; color: #333; letter-spacing: 2px; font-weight: bold; }
+        .bottom-value { font-size: 65px; font-weight: bold; margin-top: 5px; color: #000; }
+        
+        .weather-display { font-weight: normal; margin-left: 10px; color: #333; }
+        .weather-display i { font-size: 55px; vertical-align: middle; }
     </style>
 </head>
 <body>
-    <div id="screen">
-        <div class="title">TEST DE ÍCONOS UNICODE</div>
+    <div id="debug"></div>
+    
+    <div id="status-bar" class="big" style="margin-top: 250px;">INITIALIZING...</div>
 
-        <div class="test-row">
-            <span class="label">Sans-Serif<br>(Actual/Ember)</span>
-            <span style="font-family: sans-serif;">✈ ☀ ☁ ☂ ⚡</span>
-        </div>
-
-        <div class="test-row">
-            <span class="label">Helvetica<br>(Forzada)</span>
-            <span style="font-family: 'Helvetica', 'Helvetica Neue', sans-serif;">✈ ☀ ☁ ☂ ⚡</span>
-        </div>
-
-        <div class="test-row">
-            <span class="label">Serif<br>(Clásica)</span>
-            <span style="font-family: serif;">✈ ☀ ☁ ☂ ⚡</span>
-        </div>
-
-        <div class="test-row">
-            <span class="label">Bookerly<br>(Nativa Kindle)</span>
-            <span style="font-family: 'Bookerly', serif;">✈ ☀ ☁ ☂ ⚡</span>
-        </div>
-
-        <div class="test-row">
-            <span class="label">Monospace<br>(Terminal)</span>
-            <span style="font-family: monospace;">✈ ☀ ☁ ☂ ⚡</span>
-        </div>
+    <!-- PANTALLA CIELO DESPEJADO -->
+    <div id="view-clearsky" class="hidden box">
+        <div class="huge" style="margin-top: 100px; font-size: 90px;">CLEAR SKY</div>
+        <div class="big" style="margin-top: 40px;">Next flight at <span id="next-dist">--</span> km</div>
         
-        <div class="test-row">
-            <span class="label">Courier New<br>(Radar retro)</span>
-            <span style="font-family: 'Courier New', Courier, monospace;">✈ ☀ ☁ ☂ ⚡</span>
+        <div class="bottom-container" style="margin-top: 60px;">
+            <div class="bottom-label">LOCAL & WX</div>
+            <div class="bottom-value">
+                <span class="clock-display">00:00</span><span class="weather-display" id="wx-clear"></span>
+            </div>
         </div>
     </div>
+
+    <!-- PANTALLA VUELO DETECTADO -->
+    <div id="view-flight" class="hidden box">
+        <div class="title-container">
+            <!-- Usamos el ícono vectorial oficial de avión de FontAwesome -->
+            <span id="callsign" class="huge"><i class="fa-solid fa-plane"></i>---</span>
+            <span id="track-arrow" class="arrow"><i class="fa-solid fa-arrow-up"></i></span>
+        </div>
+        <div id="airline" class="big">---</div>
+        
+        <div class="data-container">
+            <div class="med">ALTITUDE<b id="alt">--</b></div>
+            <div class="med">SPEED<b id="spd">--</b></div>
+            <div class="med">DISTANCE<b id="dist">--</b></div>
+        </div>
+
+        <div class="bottom-container">
+            <div class="bottom-item">
+                <div class="bottom-label">LOCAL & WX</div>
+                <div class="bottom-value">
+                    <span class="clock-display">00:00</span><span class="weather-display" id="wx-flight"></span>
+                </div>
+            </div>
+            <div class="bottom-item">
+                <div class="bottom-label">ETA (OVERHEAD)</div>
+                <div id="eta" class="bottom-value">--</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var USER_LAT = -34.53;
+        var USER_LON = -58.49;
+        
+        var RADAR_API_URL = '/api/vuelos';
+        var WEATHER_API_URL = 'https://api.open-meteo.com/v1/forecast?latitude=' + USER_LAT + '&longitude=' + USER_LON + '&current_weather=true';
+
+        var statusBar = document.getElementById('status-bar');
+        var viewClearSky = document.getElementById('view-clearsky');
+        var viewFlight = document.getElementById('view-flight');
+        var debugEl = document.getElementById('debug');
+
+        var nextDistEl = document.getElementById('next-dist');
+        var callsignEl = document.getElementById('callsign');
+        var airlineEl = document.getElementById('airline');
+        var altEl = document.getElementById('alt');
+        var spdEl = document.getElementById('spd');
+        var distEl = document.getElementById('dist');
+        var trackArrowEl = document.getElementById('track-arrow');
+        var etaEl = document.getElementById('eta');
+
+        var previousDistances = {};
+        var planeStates = {}; 
+
+        var airlines = {
+            'ARG': 'Aerolíneas Argentinas',
+            'FBZ': 'Flybondi',
+            'AVA': 'Avianca',
+            'JSM': 'JetSMART',
+            'LAN': 'LATAM Airlines',
+            'GLO': 'GOL Linhas Aéreas',
+            'AAL': 'American Airlines',
+            'DAL': 'Delta Air Lines',
+            'UAL': 'United Airlines',
+            'IBE': 'Iberia',
+            'LPE': 'LATAM Perú',
+            'DSM': 'LADE',
+            'CMP': 'Copa Airlines',
+            'AZU': 'Azul Linhas Aéreas',
+            'BOV': 'Boliviana de Aviación',
+            'SKU': 'Sky Airline'
+        };
+
+        // --- RELOJ ---
+        function updateClock() {
+            var d = new Date();
+            var h = d.getHours();
+            var m = d.getMinutes();
+            var timeStr = (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
+            var clocks = document.getElementsByClassName('clock-display');
+            for(var i = 0; i < clocks.length; i++) {
+                clocks[i].innerText = timeStr;
+            }
+        }
+        setInterval(updateClock, 30000); 
+        updateClock();
+
+        // --- CLIMA CON ÍCONOS VECTORIALES DE FONTAWESOME ---
+        function getWeatherIconHtml(code) {
+            if (code === 0) return '<i class="fa-solid fa-sun"></i>'; // Sol
+            if (code >= 1 && code <= 3) return '<i class="fa-solid fa-cloud"></i>'; // Nube
+            if (code === 45 || code === 48) return '<i class="fa-solid fa-smog"></i>'; // Niebla
+            if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return '<i class="fa-solid fa-cloud-rain"></i>'; // Lluvia
+            if ((code >= 71 && code <= 77) || code === 85 || code === 86) return '<i class="fa-solid fa-snowflake"></i>'; // Nieve
+            if (code >= 95 && code <= 99) return '<i class="fa-solid fa-cloud-bolt"></i>'; // Tormenta
+            return '<i class="fa-solid fa-cloud-sun"></i>';
+        }
+
+        function fetchWeather() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', WEATHER_API_URL, true);
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        var data = JSON.parse(xhr.responseText);
+                        var temp = Math.round(data.current_weather.temperature);
+                        var iconHtml = getWeatherIconHtml(data.current_weather.weathercode);
+                        var weatherHtml = ' | ' + iconHtml + ' ' + temp + '°';
+                        
+                        document.getElementById('wx-clear').innerHTML = weatherHtml;
+                        document.getElementById('wx-flight').innerHTML = weatherHtml;
+                    } catch (e) {}
+                }
+            };
+            xhr.send();
+        }
+        fetchWeather();
+        setInterval(fetchWeather, 1800000);
+
+        // --- RADAR ---
+        function getHaversineDistance(lat1, lon1, lat2, lon2) {
+            var R = 6371;
+            var dLat = (lat2 - lat1) * Math.PI / 180;
+            var dLon = (lon2 - lon1) * Math.PI / 180;
+            var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function getBearing(lat1, lon1, lat2, lon2) {
+            var dLon = (lon2 - lon1) * Math.PI / 180;
+            lat1 = lat1 * Math.PI / 180;
+            lat2 = lat2 * Math.PI / 180;
+            var y = Math.sin(dLon) * Math.cos(lat2);
+            var x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+            return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+        }
+
+        // Convertimos los grados de la ruta en la clase de rotación de la flecha de FontAwesome
+        function getDirectionArrowHtml(degrees) {
+            if (degrees === null || degrees === undefined) return '<i class="fa-solid fa-arrow-up"></i>';
+            // FontAwesome tiene clases directas para rotar flechas: fa-rotate-0, fa-rotate-45, etc.
+            var rounded = Math.round((degrees % 360) / 45) * 45;
+            return '<i class="fa-solid fa-arrow-up fa-rotate-' + rounded + '"></i>';
+        }
+
+        function getAirline(callsign) {
+            if (!callsign) return 'UNIDENTIFIED FLIGHT';
+            var clean = callsign.trim();
+            var code3 = clean.substring(0, 3).toUpperCase();
+            return airlines[code3] || 'COMMERCIAL FLIGHT';
+        }
+
+        function fetchRadar() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', RADAR_API_URL, true);
+            
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        var data = JSON.parse(xhr.responseText);
+                        statusBar.className = 'hidden'; 
+                        debugEl.innerHTML = ''; 
+                        
+                        if (!data || !data.ac || data.ac.length === 0) {
+                            showClearSky('--');
+                            return;
+                        }
+
+                        var currentDistances = {};
+                        var currentStates = {};
+                        var closestFlight = null;
+                        var minDistance = Infinity;
+
+                        for (var i = 0; i < data.ac.length; i++) {
+                            var plane = data.ac[i];
+                            if (plane.lat && plane.lon) {
+                                var dist = getHaversineDistance(USER_LAT, USER_LON, plane.lat, plane.lon);
+                                var planeId = (plane.flight || plane.hex || 'UNK').trim();
+                                
+                                currentDistances[planeId] = dist;
+                                
+                                var stateObj = planeStates[planeId] || { phase: 'UNKNOWN', graceTicks: 0 };
+                                var isApproaching = false;
+
+                                if (previousDistances[planeId] !== undefined) {
+                                    if (dist > previousDistances[planeId] + 0.05) {
+                                        if (stateObj.phase === 'APPROACHING') {
+                                            stateObj.phase = 'LEAVING';
+                                            stateObj.graceTicks = 4;
+                                        } else if (stateObj.phase === 'LEAVING') {
+                                            if (stateObj.graceTicks > 0) stateObj.graceTicks--;
+                                        } else {
+                                            stateObj.phase = 'LEAVING';
+                                            stateObj.graceTicks = 0;
+                                        }
+                                    } else if (dist < previousDistances[planeId] - 0.05) {
+                                        stateObj.phase = 'APPROACHING';
+                                        isApproaching = true;
+                                    }
+                                } else {
+                                    isApproaching = true; 
+                                }
+                                
+                                currentStates[planeId] = stateObj;
+
+                                var isPointingToUs = true;
+                                if (plane.track !== null && plane.track !== undefined) {
+                                    var bearingToUs = getBearing(plane.lat, plane.lon, USER_LAT, USER_LON);
+                                    var headingDiff = Math.abs(bearingToUs - plane.track);
+                                    if (headingDiff > 180) headingDiff = 360 - headingDiff;
+                                    if (headingDiff > 60) {
+                                        isPointingToUs = false;
+                                    }
+                                }
+
+                                var isEligible = ((isApproaching || stateObj.phase === 'UNKNOWN') && isPointingToUs) || (stateObj.phase === 'LEAVING' && stateObj.graceTicks > 0);
+
+                                if (isEligible && dist < minDistance) {
+                                    minDistance = dist;
+                                    closestFlight = plane;
+                                }
+                            }
+                        }
+
+                        previousDistances = currentDistances;
+                        planeStates = currentStates; 
+
+                        if (closestFlight) {
+                            if (minDistance < 20) {
+                                showFlight(closestFlight, minDistance);
+                            } else {
+                                showClearSky(minDistance.toFixed(1));
+                            }
+                        } else {
+                            showClearSky('--');
+                        }
+                    } catch (e) {
+                        debugEl.innerHTML = 'Data error';
+                    }
+                } else {
+                    debugEl.innerHTML = 'Reconnecting...';
+                }
+            };
+
+            xhr.onerror = function() {
+                debugEl.innerHTML = 'Reconnecting...';
+            };
+
+            xhr.send();
+        }
+
+        function showClearSky(distance) {
+            viewFlight.className = 'hidden';
+            viewClearSky.className = 'box';
+            nextDistEl.innerText = distance;
+        }
+
+        function showFlight(plane, distance) {
+            viewClearSky.className = 'hidden';
+            viewFlight.className = 'box';
+
+            var callsign = (plane.flight || '---').trim();
+            
+            var altFt = plane.alt_baro || plane.alt_geom;
+            var alt = '---';
+            if (altFt === 'ground') {
+                alt = 'On ground';
+            } else if (altFt !== null && altFt !== undefined) {
+                var numericAlt = parseFloat(altFt);
+                if (!isNaN(numericAlt)) {
+                    alt = numericAlt <= 0 ? 'On ground' : Math.round(numericAlt * 0.3048) + ' m';
+                }
+            }
+
+            var spdKmH = plane.gs ? (plane.gs * 1.852) : null;
+            var spd = spdKmH !== null ? Math.round(spdKmH) + ' km/h' : '---';
+            
+            var etaText = '---';
+            if (spdKmH !== null && spdKmH > 20) { 
+                var etaMin = (distance / spdKmH) * 60;
+                if (etaMin < 1) {
+                    etaText = '< 1 min';
+                } else {
+                    etaText = Math.round(etaMin) + ' min';
+                }
+            } else if (spdKmH !== null && spdKmH <= 20) {
+                etaText = 'N/A';
+            }
+
+            var track = plane.track;
+
+            callsignEl.innerHTML = '<i class="fa-solid fa-plane"></i> ' + callsign;
+            airlineEl.innerText = getAirline(callsign);
+            altEl.innerText = alt;
+            spdEl.innerText = spd;
+            distEl.innerText = distance.toFixed(1) + ' km';
+            etaEl.innerText = etaText;
+            trackArrowEl.innerHTML = getDirectionArrowHtml(track);
+        }
+
+        fetchRadar();
+        setInterval(fetchRadar, 15000);
+    </script>
 </body>
 </html>
