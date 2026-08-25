@@ -25,7 +25,7 @@
             overflow: hidden;
         }
         
-        #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; }
+        #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; z-index: 10; }
         .hidden { display: none !important; }
         
         .box { padding-top: 30px; box-sizing: border-box; width: 100%; }
@@ -40,11 +40,14 @@
         .med { display: inline-block; width: 32%; font-size: 20px; vertical-align: top; color: #333; }
         .med b { font-size: 42px; display: block; margin-top: 5px; color: #000; }
 
-        /* Nuevo diseño para acomodar Reloj y ETA lado a lado */
-        .bottom-container { margin-top: 35px; width: 90%; margin-left: 5%; white-space: nowrap; }
+        .bottom-container { margin-top: 40px; width: 96%; margin-left: 2%; white-space: nowrap; }
         .bottom-item { display: inline-block; width: 48%; vertical-align: top; }
         .bottom-label { font-size: 24px; color: #333; letter-spacing: 2px; }
-        .bottom-value { font-size: 80px; font-weight: bold; margin-top: 5px; color: #000; }
+        /* Achiqué un poquito a 65px para que entre la hora + el clima sin apretarse */
+        .bottom-value { font-size: 65px; font-weight: bold; margin-top: 5px; color: #000; }
+        
+        /* Estilo sutil para el clima al lado de la hora */
+        .weather-display { font-weight: normal; margin-left: 10px; color: #333; }
     </style>
 </head>
 <body>
@@ -52,17 +55,20 @@
     
     <div id="status-bar" class="big" style="margin-top: 250px;">INITIALIZING...</div>
 
+    <!-- PANTALLA CIELO DESPEJADO -->
     <div id="view-clearsky" class="hidden box">
         <div class="huge" style="margin-top: 100px; font-size: 90px;">CLEAR SKY</div>
         <div class="big" style="margin-top: 40px;">Next flight at <span id="next-dist">--</span> km</div>
         
-        <!-- Reloj gigante cuando el cielo está despejado -->
         <div class="bottom-container" style="margin-top: 60px;">
-            <div class="bottom-label">LOCAL TIME</div>
-            <div class="bottom-value clock-display">0000</div>
+            <div class="bottom-label">LOCAL & WX</div>
+            <div class="bottom-value">
+                <span class="clock-display">00:00</span><span class="weather-display"></span>
+            </div>
         </div>
     </div>
 
+    <!-- PANTALLA VUELO DETECTADO -->
     <div id="view-flight" class="hidden box">
         <div class="title-container">
             <span id="callsign" class="huge">✈ ---</span>
@@ -76,11 +82,12 @@
             <div class="med">DISTANCE<b id="dist">--</b></div>
         </div>
 
-        <!-- Reloj y ETA lado a lado -->
         <div class="bottom-container">
             <div class="bottom-item">
-                <div class="bottom-label">LOCAL TIME</div>
-                <div class="bottom-value clock-display">0000</div>
+                <div class="bottom-label">LOCAL & WX</div>
+                <div class="bottom-value">
+                    <span class="clock-display">00:00</span><span class="weather-display"></span>
+                </div>
             </div>
             <div class="bottom-item">
                 <div class="bottom-label">ETA (OVERHEAD)</div>
@@ -92,7 +99,10 @@
     <script>
         var USER_LAT = -34.53;
         var USER_LON = -58.49;
-        var API_URL = '/api/vuelos';
+        
+        // Motores de datos
+        var RADAR_API_URL = '/api/vuelos';
+        var WEATHER_API_URL = 'https://api.open-meteo.com/v1/forecast?latitude=' + USER_LAT + '&longitude=' + USER_LON + '&current_weather=true';
 
         var statusBar = document.getElementById('status-bar');
         var viewClearSky = document.getElementById('view-clearsky');
@@ -130,12 +140,13 @@
             'SKU': 'Sky Airline'
         };
 
-        // El reloj ahora busca todos los elementos con la clase 'clock-display' y los actualiza
+        // --- MÓDULO 1: RELOJ (Actualiza cada 30 seg) ---
         function updateClock() {
             var d = new Date();
             var h = d.getHours();
             var m = d.getMinutes();
-            var timeStr = (h < 10 ? '0' + h : h) + '' + (m < 10 ? '0' + m : m);
+            // Acá agregamos los famosos dos puntos (:)
+            var timeStr = (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
             var clocks = document.getElementsByClassName('clock-display');
             for(var i = 0; i < clocks.length; i++) {
                 clocks[i].innerText = timeStr;
@@ -144,6 +155,44 @@
         setInterval(updateClock, 30000); 
         updateClock();
 
+        // --- MÓDULO 2: CLIMA (Actualiza cada 30 MINUTOS) ---
+        function getWeatherIcon(code) {
+            // Símbolos Unicode clásicos compatibles con el e-ink del Kindle
+            if (code === 0) return '☀'; // Despejado
+            if (code >= 1 && code <= 3) return '☁'; // Nublado/Parcialmente nublado
+            if (code === 45 || code === 48) return '〰'; // Niebla
+            if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return '☂'; // Lluvia/Llovizna
+            if ((code >= 71 && code <= 77) || code === 85 || code === 86) return '❄'; // Nieve
+            if (code >= 95 && code <= 99) return '⚡'; // Tormenta
+            return '';
+        }
+
+        function fetchWeather() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', WEATHER_API_URL, true);
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        var data = JSON.parse(xhr.responseText);
+                        var temp = Math.round(data.current_weather.temperature);
+                        var icon = getWeatherIcon(data.current_weather.weathercode);
+                        var weatherStr = ' | ' + icon + ' ' + temp + '°';
+                        
+                        var weatherDisplays = document.getElementsByClassName('weather-display');
+                        for(var i = 0; i < weatherDisplays.length; i++) {
+                            weatherDisplays[i].innerText = weatherStr;
+                        }
+                    } catch (e) {
+                        // Si falla, no decimos nada para no ensuciar la pantalla
+                    }
+                }
+            };
+            xhr.send();
+        }
+        fetchWeather();
+        setInterval(fetchWeather, 1800000); // 1.800.000 ms = 30 Minutos
+
+        // --- MÓDULO 3: RADAR (Actualiza cada 15 seg) ---
         function getHaversineDistance(lat1, lon1, lat2, lon2) {
             var R = 6371;
             var dLat = (lat2 - lat1) * Math.PI / 180;
@@ -178,9 +227,9 @@
             return airlines[code3] || 'COMMERCIAL FLIGHT';
         }
 
-        function fetchData() {
+        function fetchRadar() {
             var xhr = new XMLHttpRequest();
-            xhr.open('GET', API_URL, true);
+            xhr.open('GET', RADAR_API_URL, true);
             
             xhr.onload = function() {
                 if (xhr.status >= 200 && xhr.status < 300) {
@@ -326,8 +375,8 @@
             trackArrowEl.innerText = getDirectionArrow(track);
         }
 
-        fetchData();
-        setInterval(fetchData, 15000);
+        fetchRadar();
+        setInterval(fetchRadar, 15000);
     </script>
 </body>
 </html>
