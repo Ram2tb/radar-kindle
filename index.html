@@ -14,17 +14,34 @@
             overflow: hidden;
         }
         body {
+            /* Prefijos para navegadores viejos (Kindle) */
+            -webkit-transform: rotate(90deg);
             transform: rotate(90deg);
+            -webkit-transform-origin: top left;
             transform-origin: top left;
             width: 100vh;
             height: 100vw;
             position: absolute;
             top: 0;
             left: 100vw;
+            
+            display: -webkit-box;
+            display: -webkit-flex;
             display: flex;
+            
+            -webkit-box-orient: vertical;
+            -webkit-box-direction: normal;
+            -webkit-flex-direction: column;
             flex-direction: column;
+            
+            -webkit-box-pack: center;
+            -webkit-justify-content: center;
             justify-content: center;
+            
+            -webkit-box-align: center;
+            -webkit-align-items: center;
             align-items: center;
+            
             text-align: center;
             box-sizing: border-box;
             padding: 4vh;
@@ -39,7 +56,6 @@
             font-weight: bold;
         }
         
-        /* Clear Sky Styles */
         #clear-sky-title {
             font-size: 15vh;
             font-weight: bold;
@@ -49,7 +65,6 @@
             font-size: 6vh;
         }
         
-        /* Flight Dashboard Styles */
         #callsign {
             font-size: 22vh;
             font-weight: bold;
@@ -62,14 +77,26 @@
             margin-bottom: 8vh;
         }
         .data-grid {
+            display: -webkit-box;
+            display: -webkit-flex;
             display: flex;
+            
+            -webkit-justify-content: space-around;
             justify-content: space-around;
             width: 100%;
             margin-bottom: 2vh;
         }
         .data-item {
+            display: -webkit-box;
+            display: -webkit-flex;
             display: flex;
+            
+            -webkit-box-orient: vertical;
+            -webkit-flex-direction: column;
             flex-direction: column;
+            
+            -webkit-box-align: center;
+            -webkit-align-items: center;
             align-items: center;
         }
         .data-label {
@@ -94,7 +121,7 @@
     <!-- Vista Cielo Despejado -->
     <div id="view-clearsky" class="hidden">
         <div id="clear-sky-title">CIELO DESPEJADO</div>
-        <div id="clear-sky-subtitle">Próximo vuelo detectado a <span id="next-dist">--</span> km acercándose</div>
+        <div id="clear-sky-subtitle">Próximo vuelo a <span id="next-dist">--</span> km</div>
     </div>
 
     <!-- Vista Dashboard Vuelo -->
@@ -117,28 +144,30 @@
         </div>
         <div id="track-arrow">↑</div>
     </div>
-<script>
-        const USER_LAT = -34.53;
-        const USER_LON = -58.49;
-        // Pedimos datos a 80 millas náuticas (aprox 150 km) directo a ADSB.lol, sin proxies
-        const API_URL = '/api/vuelos';
-        const statusBar = document.getElementById('status-bar');
-        const viewClearSky = document.getElementById('view-clearsky');
-        const viewFlight = document.getElementById('view-flight');
 
-        const nextDistEl = document.getElementById('next-dist');
-        const callsignEl = document.getElementById('callsign');
-        const airlineEl = document.getElementById('airline');
-        const altEl = document.getElementById('alt');
-        const spdEl = document.getElementById('spd');
-        const distEl = document.getElementById('dist');
-        const trackArrowEl = document.getElementById('track-arrow');
+    <script>
+        // Usamos variables al estilo antiguo para máxima compatibilidad
+        var USER_LAT = -34.53;
+        var USER_LON = -58.49;
+        var API_URL = '/api/vuelos';
 
-        const airlines = {
+        var statusBar = document.getElementById('status-bar');
+        var viewClearSky = document.getElementById('view-clearsky');
+        var viewFlight = document.getElementById('view-flight');
+
+        var nextDistEl = document.getElementById('next-dist');
+        var callsignEl = document.getElementById('callsign');
+        var airlineEl = document.getElementById('airline');
+        var altEl = document.getElementById('alt');
+        var spdEl = document.getElementById('spd');
+        var distEl = document.getElementById('dist');
+        var trackArrowEl = document.getElementById('track-arrow');
+
+        var airlines = {
             'ARG': 'Aerolíneas Argentinas',
             'FBZ': 'Flybondi',
-            'JSM': 'JetSMART',
             'AVA': 'Avianca',
+            'JSM': 'JetSMART',
             'LAN': 'LATAM Airlines',
             'GLO': 'GOL Linhas Aéreas',
             'AAL': 'American Airlines',
@@ -154,89 +183,99 @@
         };
 
         function getHaversineDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            var R = 6371;
+            var dLat = (lat2 - lat1) * Math.PI / 180;
+            var dLon = (lon2 - lon1) * Math.PI / 180;
+            var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
                       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
                       Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             return R * c;
         }
 
         function getDirectionArrow(degrees) {
             if (degrees === null || degrees === undefined) return '';
-            const arrows = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖', '↑'];
-            const index = Math.round((degrees % 360) / 45);
+            var arrows = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖', '↑'];
+            var index = Math.round((degrees % 360) / 45);
             return arrows[index];
         }
 
         function getAirline(callsign) {
             if (!callsign) return 'VUELO NO IDENTIFICADO';
-            const clean = callsign.trim();
-            const code3 = clean.substring(0, 3).toUpperCase();
+            var clean = callsign.trim();
+            var code3 = clean.substring(0, 3).toUpperCase();
             return airlines[code3] || 'VUELO COMERCIAL';
         }
 
-        async function fetchData() {
-            try {
-                const response = await fetch(API_URL);
-                if (!response.ok) throw new Error('Error de red');
-                const data = await response.json();
-                
-                statusBar.innerText = '';
-                
-                if (!data || !data.ac || data.ac.length === 0) {
-                    showClearSky('--');
-                    return;
-                }
-
-                let closestFlight = null;
-                let minDistance = Infinity;
-
-                data.ac.forEach(plane => {
-                    if (plane.lat && plane.lon) {
-                        const dist = getHaversineDistance(USER_LAT, USER_LON, plane.lat, plane.lon);
-                        if (dist < minDistance) {
-                            minDistance = dist;
-                            closestFlight = plane;
+        // Reemplazamos Fetch y Async/Await por el viejo y confiable XMLHttpRequest
+        function fetchData() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', API_URL, true);
+            
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        var data = JSON.parse(xhr.responseText);
+                        statusBar.innerText = '';
+                        
+                        if (!data || !data.ac || data.ac.length === 0) {
+                            showClearSky('--');
+                            return;
                         }
-                    }
-                });
 
-                if (closestFlight) {
-                    if (minDistance < 20) {
-                        showFlight(closestFlight, minDistance);
-                    } else {
-                        showClearSky(minDistance.toFixed(1));
+                        var closestFlight = null;
+                        var minDistance = Infinity;
+
+                        for (var i = 0; i < data.ac.length; i++) {
+                            var plane = data.ac[i];
+                            if (plane.lat && plane.lon) {
+                                var dist = getHaversineDistance(USER_LAT, USER_LON, plane.lat, plane.lon);
+                                if (dist < minDistance) {
+                                    minDistance = dist;
+                                    closestFlight = plane;
+                                }
+                            }
+                        }
+
+                        if (closestFlight) {
+                            if (minDistance < 20) {
+                                showFlight(closestFlight, minDistance);
+                            } else {
+                                showClearSky(minDistance.toFixed(1));
+                            }
+                        } else {
+                            showClearSky('--');
+                        }
+                    } catch (e) {
+                        statusBar.innerText = 'ERROR DE DATOS';
                     }
                 } else {
-                    showClearSky('--');
+                    statusBar.innerText = 'RECONECTANDO...';
                 }
+            };
 
-            } catch (error) {
-                console.error(error);
+            xhr.onerror = function() {
                 statusBar.innerText = 'RECONECTANDO...';
-            }
+            };
+
+            xhr.send();
         }
 
         function showClearSky(distance) {
-            viewFlight.classList.add('hidden');
-            viewClearSky.classList.remove('hidden');
+            viewFlight.className = 'hidden';
+            viewClearSky.className = '';
             nextDistEl.innerText = distance;
         }
 
         function showFlight(plane, distance) {
-            viewClearSky.classList.add('hidden');
-            viewFlight.classList.remove('hidden');
+            viewClearSky.className = 'hidden';
+            viewFlight.className = '';
 
-            const callsign = (plane.flight || '---').trim();
-            
-            // ADSB.lol devuelve pies y nudos, convertimos a metros y km/h
-            const altFt = plane.alt_baro || plane.alt_geom;
-            const alt = altFt ? (altFt <= 0 ? 'En tierra' : Math.round(altFt * 0.3048) + ' m') : '---';
-            const spd = plane.gs ? Math.round(plane.gs * 1.852) + ' km/h' : '---';
-            const track = plane.track;
+            var callsign = (plane.flight || '---').trim();
+            var altFt = plane.alt_baro || plane.alt_geom;
+            var alt = altFt ? (altFt <= 0 ? 'En tierra' : Math.round(altFt * 0.3048) + ' m') : '---';
+            var spd = plane.gs ? Math.round(plane.gs * 1.852) + ' km/h' : '---';
+            var track = plane.track;
 
             callsignEl.innerText = callsign;
             airlineEl.innerText = getAirline(callsign);
@@ -246,8 +285,8 @@
             trackArrowEl.innerText = getDirectionArrow(track);
         }
 
+        // Arrancamos!
         fetchData();
-        // Volvemos a los gloriosos 10 segundos!
         setInterval(fetchData, 10000);
     </script>
 </body>
