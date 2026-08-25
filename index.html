@@ -5,7 +5,7 @@
     <title>Radar</title>
     <style>
         body {
-            /* Ajustado a 740px para descontar la barra superior del Kindle */
+            /* Ancho ajustado a 700px para el centro perfecto */
             width: 700px; 
             height: 600px;
             margin: 0;
@@ -27,7 +27,8 @@
         #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; }
         .hidden { display: none !important; }
         
-        .box { padding-top: 30px; box-sizing: border-box; height: 600px; }
+        /* Aumenté un poco el padding-top para empujar todo hacia el centro */
+        .box { padding-top: 40px; box-sizing: border-box; height: 600px; }
         
         .title-container { margin-top: 10px; white-space: nowrap; }
         .huge { font-size: 110px; font-weight: bold; display: inline-block; vertical-align: middle; margin: 0; }
@@ -35,10 +36,14 @@
         
         .big { font-size: 40px; margin: 10px 0 35px 0; }
         
-        /* Ajustamos un poquito los contenedores de abajo para el nuevo ancho */
-        .data-container { margin-top: 30px; width: 100%; white-space: nowrap; }
+        .data-container { margin-top: 20px; width: 100%; white-space: nowrap; }
         .med { display: inline-block; width: 32%; font-size: 20px; vertical-align: top; color: #333; }
         .med b { font-size: 42px; display: block; margin-top: 5px; color: #000; }
+
+        /* Nueva caja gigante para el ETA abajo de todo */
+        .eta-box { margin-top: 50px; }
+        .eta-label { font-size: 26px; color: #333; letter-spacing: 2px; }
+        .eta-value { font-size: 80px; font-weight: bold; margin-top: 5px; }
         
     </style>
 </head>
@@ -54,15 +59,21 @@
 
     <div id="view-flight" class="hidden box">
         <div class="title-container">
-            <!-- ¡Avioncito agregado acá! -->
             <span id="callsign" class="huge">✈ ---</span>
             <span id="track-arrow" class="arrow">↑</span>
         </div>
         <div id="airline" class="big">---</div>
+        
         <div class="data-container">
             <div class="med">ALTITUDE<b id="alt">--</b></div>
             <div class="med">SPEED<b id="spd">--</b></div>
             <div class="med">DISTANCE<b id="dist">--</b></div>
+        </div>
+
+        <!-- El nuevo bloque de ETA -->
+        <div class="eta-box">
+            <div class="eta-label">ETA (OVERHEAD)</div>
+            <div id="eta" class="eta-value">--</div>
         </div>
     </div>
 
@@ -83,6 +94,7 @@
         var spdEl = document.getElementById('spd');
         var distEl = document.getElementById('dist');
         var trackArrowEl = document.getElementById('track-arrow');
+        var etaEl = document.getElementById('eta');
 
         var previousDistances = {};
         var planeStates = {}; 
@@ -239,7 +251,22 @@
                 }
             }
 
-            var spd = plane.gs ? Math.round(plane.gs * 1.852) + ' km/h' : '---';
+            var spdKmH = plane.gs ? (plane.gs * 1.852) : null;
+            var spd = spdKmH !== null ? Math.round(spdKmH) + ' km/h' : '---';
+            
+            // Cálculo del ETA
+            var etaText = '---';
+            if (spdKmH !== null && spdKmH > 20) { // Ignoramos si va a menos de 20 km/h (carreteando)
+                var etaMin = (distance / spdKmH) * 60; // (km / km/h) * 60 = minutos
+                if (etaMin < 1) {
+                    etaText = '< 1 min';
+                } else {
+                    etaText = Math.round(etaMin) + ' min';
+                }
+            } else if (spdKmH !== null && spdKmH <= 20) {
+                etaText = 'N/A'; // Demasiado lento para calcular
+            }
+
             var track = plane.track;
 
             callsignEl.innerText = '✈ ' + callsign;
@@ -247,6 +274,7 @@
             altEl.innerText = alt;
             spdEl.innerText = spd;
             distEl.innerText = distance.toFixed(1) + ' km';
+            etaEl.innerText = etaText; // Inyectamos el tiempo estimado
             trackArrowEl.innerText = getDirectionArrow(track);
         }
 
