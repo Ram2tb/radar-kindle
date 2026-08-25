@@ -28,8 +28,16 @@
         #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; }
         .hidden { display: none !important; }
         
-        /* Reloj estilo aviación en la esquina superior derecha */
-        #clock { position: absolute; top: 20px; right: 20px; font-size: 35px; font-weight: bold; letter-spacing: 2px; }
+        /* Reloj reubicado arriba a la izquierda y más sutil */
+        #clock { 
+            position: absolute; 
+            top: 20px; 
+            left: 30px; 
+            font-size: 32px; 
+            font-weight: bold; 
+            letter-spacing: 2px;
+            color: #666666;
+        }
         
         .box { padding-top: 30px; box-sizing: border-box; width: 100%; }
         
@@ -119,7 +127,6 @@
             'SKU': 'Sky Airline'
         };
 
-        // Reloj formato 0000
         function updateClock() {
             var d = new Date();
             var h = d.getHours();
@@ -127,7 +134,7 @@
             var timeStr = (h < 10 ? '0' + h : h) + '' + (m < 10 ? '0' + m : m);
             document.getElementById('clock').innerText = timeStr;
         }
-        setInterval(updateClock, 30000); // Actualiza cada 30 seg
+        setInterval(updateClock, 30000); 
         updateClock();
 
         function getHaversineDistance(lat1, lon1, lat2, lon2) {
@@ -141,7 +148,6 @@
             return R * c;
         }
 
-        // Nueva fórmula de trigonometría para saber desde qué ángulo nos miran
         function getBearing(lat1, lon1, lat2, lon2) {
             var dLon = (lon2 - lon1) * Math.PI / 180;
             lat1 = lat1 * Math.PI / 180;
@@ -213,26 +219,21 @@
                                         isApproaching = true;
                                     }
                                 } else {
-                                    // Si no lo teníamos en memoria, asumimos que viene para darle una chance
                                     isApproaching = true; 
                                 }
                                 
                                 currentStates[planeId] = stateObj;
 
-                                // === EL FILTRO DE AEROPARQUE (CONO RADAR) ===
                                 var isPointingToUs = true;
                                 if (plane.track !== null && plane.track !== undefined) {
                                     var bearingToUs = getBearing(plane.lat, plane.lon, USER_LAT, USER_LON);
                                     var headingDiff = Math.abs(bearingToUs - plane.track);
                                     if (headingDiff > 180) headingDiff = 360 - headingDiff;
-                                    // Si la diferencia entre a dónde apunta y dónde estás es mayor a 60 grados, no viene para acá.
                                     if (headingDiff > 60) {
                                         isPointingToUs = false;
                                     }
                                 }
-                                // ==========================================
 
-                                // Solo lo mostramos si se está acercando Y apunta hacia vos (o si acaba de pasarte y está en gracia)
                                 var isEligible = ((isApproaching || stateObj.phase === 'UNKNOWN') && isPointingToUs) || (stateObj.phase === 'LEAVING' && stateObj.graceTicks > 0);
 
                                 if (isEligible && dist < minDistance) {
