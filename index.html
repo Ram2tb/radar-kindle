@@ -5,7 +5,8 @@
     <title>Radar</title>
     <style>
         body {
-            width: 800px;
+            /* Ajustado a 740px para descontar la barra superior del Kindle */
+            width: 740px; 
             height: 600px;
             margin: 0;
             padding: 0;
@@ -34,9 +35,10 @@
         
         .big { font-size: 40px; margin: 10px 0 35px 0; }
         
+        /* Ajustamos un poquito los contenedores de abajo para el nuevo ancho */
         .data-container { margin-top: 30px; width: 100%; white-space: nowrap; }
-        .med { display: inline-block; width: 32%; font-size: 22px; vertical-align: top; color: #333; }
-        .med b { font-size: 45px; display: block; margin-top: 5px; color: #000; }
+        .med { display: inline-block; width: 32%; font-size: 20px; vertical-align: top; color: #333; }
+        .med b { font-size: 42px; display: block; margin-top: 5px; color: #000; }
         
     </style>
 </head>
@@ -52,7 +54,8 @@
 
     <div id="view-flight" class="hidden box">
         <div class="title-container">
-            <span id="callsign" class="huge">---</span>
+            <!-- ¡Avioncito agregado acá! -->
+            <span id="callsign" class="huge">✈ ---</span>
             <span id="track-arrow" class="arrow">↑</span>
         </div>
         <div id="airline" class="big">---</div>
@@ -81,7 +84,6 @@
         var distEl = document.getElementById('dist');
         var trackArrowEl = document.getElementById('track-arrow');
 
-        // Memoria de distancias y estados
         var previousDistances = {};
         var planeStates = {}; 
 
@@ -158,33 +160,26 @@
                                 
                                 currentDistances[planeId] = dist;
                                 
-                                // Recuperamos el estado anterior o creamos uno nuevo
                                 var stateObj = planeStates[planeId] || { phase: 'UNKNOWN', graceTicks: 0 };
 
                                 if (previousDistances[planeId] !== undefined) {
-                                    // Margen de 0.05km para evitar errores del GPS
                                     if (dist > previousDistances[planeId] + 0.05) {
                                         if (stateObj.phase === 'APPROACHING') {
-                                            // ¡Recién nos pasó por encima! Le damos 1 minuto de gracia (6 ticks de 10s)
                                             stateObj.phase = 'LEAVING';
                                             stateObj.graceTicks = 6;
                                         } else if (stateObj.phase === 'LEAVING') {
-                                            // Se sigue alejando, le restamos tiempo de gracia
                                             if (stateObj.graceTicks > 0) stateObj.graceTicks--;
                                         } else {
-                                            // Apareció de la nada y ya se está alejando (ej. despegue de Aeroparque)
                                             stateObj.phase = 'LEAVING';
                                             stateObj.graceTicks = 0;
                                         }
                                     } else if (dist < previousDistances[planeId] - 0.05) {
-                                        // Se está acercando
                                         stateObj.phase = 'APPROACHING';
                                     }
                                 }
                                 
                                 currentStates[planeId] = stateObj;
 
-                                // ¿Es elegible para mostrarse en pantalla?
                                 var isEligible = (stateObj.phase === 'APPROACHING' || stateObj.phase === 'UNKNOWN' || (stateObj.phase === 'LEAVING' && stateObj.graceTicks > 0));
 
                                 if (isEligible && dist < minDistance) {
@@ -195,7 +190,7 @@
                         }
 
                         previousDistances = currentDistances;
-                        planeStates = currentStates; // Limpiamos aviones viejos de la memoria
+                        planeStates = currentStates; 
 
                         if (closestFlight) {
                             if (minDistance < 20) {
@@ -247,7 +242,7 @@
             var spd = plane.gs ? Math.round(plane.gs * 1.852) + ' km/h' : '---';
             var track = plane.track;
 
-            callsignEl.innerText = callsign;
+            callsignEl.innerText = '✈ ' + callsign;
             airlineEl.innerText = getAirline(callsign);
             altEl.innerText = alt;
             spdEl.innerText = spd;
