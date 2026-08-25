@@ -4,39 +4,34 @@
     <meta charset="utf-8">
     <title>Radar</title>
     <style>
-        /* Candado anti-scroll extremo */
-        html, body {
-            width: 100%;
-            height: 100%;
+        html { overflow: hidden !important; margin: 0; padding: 0; background: #FFF; }
+        
+        /* Medidas rígidas y seguras, más chicas que la pantalla física */
+        body {
+            width: 720px; 
+            height: 580px;
             margin: 0;
             padding: 0;
             background-color: #FFFFFF;
             color: #000000;
             font-family: sans-serif;
-            overflow: hidden;
             
-            /* Esta es la bala de plata: clava la página al fondo */
-            position: fixed; 
-            top: 0;
-            left: 0;
-        }
-        
-        #screen {
             position: absolute;
             top: 0;
+            left: 600px;
+            -webkit-transform: rotate(90deg);
             -webkit-transform-origin: 0 0;
-            transform-origin: 0 0;
+            
             text-align: center;
-            box-sizing: border-box;
             overflow: hidden;
         }
         
-        #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; z-index: 10; }
+        #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; }
         .hidden { display: none !important; }
         
-        .box { padding-top: 40px; box-sizing: border-box; height: 100%; width: 100%; }
+        .box { padding-top: 30px; box-sizing: border-box; width: 100%; }
         
-        .title-container { margin-top: 10px; white-space: nowrap; width: 100%; text-align: center; }
+        .title-container { margin-top: 10px; white-space: nowrap; width: 100%; }
         .huge { font-size: 85px; font-weight: bold; display: inline-block; vertical-align: middle; margin: 0; }
         .arrow { font-size: 70px; display: inline-block; vertical-align: middle; margin-left: 15px; font-weight: normal; }
         
@@ -49,63 +44,38 @@
         .eta-box { margin-top: 35px; }
         .eta-label { font-size: 24px; color: #333; letter-spacing: 2px; }
         .eta-value { font-size: 80px; font-weight: bold; margin-top: 5px; }
-        
     </style>
 </head>
 <body>
-    <div id="screen">
-        <div id="debug"></div>
-        
-        <div id="status-bar" class="big" style="margin-top: 250px;">INITIALIZING...</div>
+    <div id="debug"></div>
+    
+    <div id="status-bar" class="big" style="margin-top: 250px;">INITIALIZING...</div>
 
-        <div id="view-clearsky" class="hidden box">
-            <div class="huge" style="margin-top: 100px; font-size: 90px;">CLEAR SKY</div>
-            <div class="big" style="margin-top: 60px;">Next flight at <span id="next-dist">--</span> km</div>
+    <div id="view-clearsky" class="hidden box">
+        <div class="huge" style="margin-top: 100px; font-size: 90px;">CLEAR SKY</div>
+        <div class="big" style="margin-top: 60px;">Next flight at <span id="next-dist">--</span> km</div>
+    </div>
+
+    <div id="view-flight" class="hidden box">
+        <div class="title-container">
+            <span id="callsign" class="huge">✈ ---</span>
+            <span id="track-arrow" class="arrow">↑</span>
+        </div>
+        <div id="airline" class="big">---</div>
+        
+        <div class="data-container">
+            <div class="med">ALTITUDE<b id="alt">--</b></div>
+            <div class="med">SPEED<b id="spd">--</b></div>
+            <div class="med">DISTANCE<b id="dist">--</b></div>
         </div>
 
-        <div id="view-flight" class="hidden box">
-            <div class="title-container">
-                <span id="callsign" class="huge">✈ ---</span>
-                <span id="track-arrow" class="arrow">↑</span>
-            </div>
-            <div id="airline" class="big">---</div>
-            
-            <div class="data-container">
-                <div class="med">ALTITUDE<b id="alt">--</b></div>
-                <div class="med">SPEED<b id="spd">--</b></div>
-                <div class="med">DISTANCE<b id="dist">--</b></div>
-            </div>
-
-            <div class="eta-box">
-                <div class="eta-label">ETA (OVERHEAD)</div>
-                <div id="eta" class="eta-value">--</div>
-            </div>
+        <div class="eta-box">
+            <div class="eta-label">ETA (OVERHEAD)</div>
+            <div id="eta" class="eta-value">--</div>
         </div>
     </div>
 
     <script>
-        // === MAGIA RESPONSIVE ===
-        // Medimos el espacio exacto del Kindle y rotamos en base a eso
-        function adjustScreen() {
-            var screenEl = document.getElementById('screen');
-            var w = window.innerWidth;
-            var h = window.innerHeight;
-            
-            // Le restamos 5 píxeles de margen de seguridad para no tocar los bordes
-            var safeW = w - 5;
-            var safeH = h - 5;
-            
-            screenEl.style.width = safeH + 'px';
-            screenEl.style.height = safeW + 'px';
-            screenEl.style.left = safeW + 'px';
-            
-            screenEl.style.webkitTransform = 'rotate(90deg)';
-            screenEl.style.transform = 'rotate(90deg)';
-        }
-        
-        adjustScreen();
-        // =========================
-
         var USER_LAT = -34.53;
         var USER_LON = -58.49;
         var API_URL = '/api/vuelos';
@@ -206,7 +176,7 @@
                                     if (dist > previousDistances[planeId] + 0.05) {
                                         if (stateObj.phase === 'APPROACHING') {
                                             stateObj.phase = 'LEAVING';
-                                            stateObj.graceTicks = 6;
+                                            stateObj.graceTicks = 4; // Ajustado a 4 ticks (1 minuto con recarga de 15s)
                                         } else if (stateObj.phase === 'LEAVING') {
                                             if (stateObj.graceTicks > 0) stateObj.graceTicks--;
                                         } else {
@@ -242,7 +212,7 @@
                             showClearSky('--');
                         }
                     } catch (e) {
-                        debugEl.innerHTML = 'Data parse error';
+                        debugEl.innerHTML = 'Data error';
                     }
                 } else {
                     debugEl.innerHTML = 'Reconnecting...';
@@ -306,7 +276,8 @@
         }
 
         fetchData();
-        setInterval(fetchData, 10000);
+        // Recarga subida a 15 segundos para darle paz al procesador
+        setInterval(fetchData, 15000);
     </script>
 </body>
 </html>
