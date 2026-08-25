@@ -117,11 +117,12 @@
         </div>
         <div id="track-arrow">↑</div>
     </div>
-
-    <script>
+<script>
         const USER_LAT = -34.53;
         const USER_LON = -58.49;
-        const API_URL = 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent('https://opensky-network.org/api/states/all?lamin=-35.88&lomin=-59.84&lamax=-33.18&lomax=-57.14');   
+        // Pedimos datos a 80 millas náuticas (aprox 150 km) directo a ADSB.lol, sin proxies
+        const API_URL = 'https://api.adsb.lol/v2/lat/-34.53/lon/-58.49/dist/80';
+
         const statusBar = document.getElementById('status-bar');
         const viewClearSky = document.getElementById('view-clearsky');
         const viewFlight = document.getElementById('view-flight');
@@ -134,7 +135,6 @@
         const distEl = document.getElementById('dist');
         const trackArrowEl = document.getElementById('track-arrow');
 
-        // Diccionario básico de aerolíneas comunes en la región
         const airlines = {
             'ARG': 'Aerolíneas Argentinas',
             'FBZ': 'Flybondi',
@@ -181,12 +181,12 @@
         async function fetchData() {
             try {
                 const response = await fetch(API_URL);
-                if (!response.ok) throw new Error('API Rate Limit o Error de red');
+                if (!response.ok) throw new Error('Error de red');
                 const data = await response.json();
                 
                 statusBar.innerText = '';
                 
-                if (!data || !data.states || data.states.length === 0) {
+                if (!data || !data.ac || data.ac.length === 0) {
                     showClearSky('--');
                     return;
                 }
@@ -194,14 +194,12 @@
                 let closestFlight = null;
                 let minDistance = Infinity;
 
-                data.states.forEach(state => {
-                    const lat = state[6];
-                    const lon = state[5];
-                    if (lat !== null && lon !== null) {
-                        const dist = getHaversineDistance(USER_LAT, USER_LON, lat, lon);
+                data.ac.forEach(plane => {
+                    if (plane.lat && plane.lon) {
+                        const dist = getHaversineDistance(USER_LAT, USER_LON, plane.lat, plane.lon);
                         if (dist < minDistance) {
                             minDistance = dist;
-                            closestFlight = state;
+                            closestFlight = plane;
                         }
                     }
                 });
@@ -217,6 +215,7 @@
                 }
 
             } catch (error) {
+                console.error(error);
                 statusBar.innerText = 'RECONECTANDO...';
             }
         }
@@ -227,14 +226,17 @@
             nextDistEl.innerText = distance;
         }
 
-        function showFlight(state, distance) {
+        function showFlight(plane, distance) {
             viewClearSky.classList.add('hidden');
             viewFlight.classList.remove('hidden');
 
-            const callsign = (state[1] || '---').trim();
-            const alt = state[7] !== null ? Math.round(state[7]) + ' m' : '---';
-            const spd = state[9] !== null ? Math.round(state[9] * 3.6) + ' km/h' : '---';
-            const track = state[10];
+            const callsign = (plane.flight || '---').trim();
+            
+            // ADSB.lol devuelve pies y nudos, convertimos a metros y km/h
+            const altFt = plane.alt_baro || plane.alt_geom;
+            const alt = altFt ? Math.round(altFt * 0.3048) + ' m' : '---';
+            const spd = plane.gs ? Math.round(plane.gs * 1.852) + ' km/h' : '---';
+            const track = plane.track;
 
             callsignEl.innerText = callsign;
             airlineEl.innerText = getAirline(callsign);
@@ -245,7 +247,8 @@
         }
 
         fetchData();
-        setInterval(fetchData, 30000);
+        // Volvemos a los gloriosos 10 segundos!
+        setInterval(fetchData, 10000);
     </script>
 </body>
 </html>
