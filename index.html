@@ -6,7 +6,6 @@
     <style>
         html { overflow: hidden !important; margin: 0; padding: 0; background: #FFF; }
         
-        /* Medidas rígidas y seguras, más chicas que la pantalla física */
         body {
             width: 720px; 
             height: 580px;
@@ -29,6 +28,9 @@
         #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; }
         .hidden { display: none !important; }
         
+        /* Reloj estilo aviación en la esquina superior derecha */
+        #clock { position: absolute; top: 20px; right: 20px; font-size: 35px; font-weight: bold; letter-spacing: 2px; }
+        
         .box { padding-top: 30px; box-sizing: border-box; width: 100%; }
         
         .title-container { margin-top: 10px; white-space: nowrap; width: 100%; }
@@ -48,6 +50,7 @@
 </head>
 <body>
     <div id="debug"></div>
+    <div id="clock">0000</div>
     
     <div id="status-bar" class="big" style="margin-top: 250px;">INITIALIZING...</div>
 
@@ -116,6 +119,17 @@
             'SKU': 'Sky Airline'
         };
 
+        // Reloj formato 0000
+        function updateClock() {
+            var d = new Date();
+            var h = d.getHours();
+            var m = d.getMinutes();
+            var timeStr = (h < 10 ? '0' + h : h) + '' + (m < 10 ? '0' + m : m);
+            document.getElementById('clock').innerText = timeStr;
+        }
+        setInterval(updateClock, 30000); // Actualiza cada 30 seg
+        updateClock();
+
         function getHaversineDistance(lat1, lon1, lat2, lon2) {
             var R = 6371;
             var dLat = (lat2 - lat1) * Math.PI / 180;
@@ -125,6 +139,16 @@
                       Math.sin(dLon/2) * Math.sin(dLon/2);
             var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             return R * c;
+        }
+
+        // Nueva fórmula de trigonometría para saber desde qué ángulo nos miran
+        function getBearing(lat1, lon1, lat2, lon2) {
+            var dLon = (lon2 - lon1) * Math.PI / 180;
+            lat1 = lat1 * Math.PI / 180;
+            lat2 = lat2 * Math.PI / 180;
+            var y = Math.sin(dLon) * Math.cos(lat2);
+            var x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+            return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
         }
 
         function getDirectionArrow(degrees) {
@@ -171,12 +195,13 @@
                                 currentDistances[planeId] = dist;
                                 
                                 var stateObj = planeStates[planeId] || { phase: 'UNKNOWN', graceTicks: 0 };
+                                var isApproaching = false;
 
                                 if (previousDistances[planeId] !== undefined) {
                                     if (dist > previousDistances[planeId] + 0.05) {
                                         if (stateObj.phase === 'APPROACHING') {
                                             stateObj.phase = 'LEAVING';
-                                            stateObj.graceTicks = 4; // Ajustado a 4 ticks (1 minuto con recarga de 15s)
+                                            stateObj.graceTicks = 4;
                                         } else if (stateObj.phase === 'LEAVING') {
                                             if (stateObj.graceTicks > 0) stateObj.graceTicks--;
                                         } else {
@@ -185,12 +210,30 @@
                                         }
                                     } else if (dist < previousDistances[planeId] - 0.05) {
                                         stateObj.phase = 'APPROACHING';
+                                        isApproaching = true;
                                     }
+                                } else {
+                                    // Si no lo teníamos en memoria, asumimos que viene para darle una chance
+                                    isApproaching = true; 
                                 }
                                 
                                 currentStates[planeId] = stateObj;
 
-                                var isEligible = (stateObj.phase === 'APPROACHING' || stateObj.phase === 'UNKNOWN' || (stateObj.phase === 'LEAVING' && stateObj.graceTicks > 0));
+                                // === EL FILTRO DE AEROPARQUE (CONO RADAR) ===
+                                var isPointingToUs = true;
+                                if (plane.track !== null && plane.track !== undefined) {
+                                    var bearingToUs = getBearing(plane.lat, plane.lon, USER_LAT, USER_LON);
+                                    var headingDiff = Math.abs(bearingToUs - plane.track);
+                                    if (headingDiff > 180) headingDiff = 360 - headingDiff;
+                                    // Si la diferencia entre a dónde apunta y dónde estás es mayor a 60 grados, no viene para acá.
+                                    if (headingDiff > 60) {
+                                        isPointingToUs = false;
+                                    }
+                                }
+                                // ==========================================
+
+                                // Solo lo mostramos si se está acercando Y apunta hacia vos (o si acaba de pasarte y está en gracia)
+                                var isEligible = ((isApproaching || stateObj.phase === 'UNKNOWN') && isPointingToUs) || (stateObj.phase === 'LEAVING' && stateObj.graceTicks > 0);
 
                                 if (isEligible && dist < minDistance) {
                                     minDistance = dist;
@@ -276,7 +319,6 @@
         }
 
         fetchData();
-        // Recarga subida a 15 segundos para darle paz al procesador
         setInterval(fetchData, 15000);
     </script>
 </body>
