@@ -1,152 +1,73 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Radar E-ink</title>
+    <meta charset="utf-8">
+    <title>Radar</title>
     <style>
-        html, body {
+        body {
+            /* Resolución exacta del Kindle 8va Gen acostado */
+            width: 800px;
+            height: 600px;
             margin: 0;
             padding: 0;
             background-color: #FFFFFF;
             color: #000000;
-            font-family: Arial, Helvetica, sans-serif;
-            overflow: hidden;
-        }
-        body {
-            /* Prefijos para navegadores viejos (Kindle) */
-            -webkit-transform: rotate(90deg);
-            transform: rotate(90deg);
-            -webkit-transform-origin: top left;
-            transform-origin: top left;
-            width: 100vh;
-            height: 100vw;
+            font-family: sans-serif;
+            
+            /* Rotación a prueba de tontos */
             position: absolute;
             top: 0;
-            left: 100vw;
-            
-            display: -webkit-box;
-            display: -webkit-flex;
-            display: flex;
-            
-            -webkit-box-orient: vertical;
-            -webkit-box-direction: normal;
-            -webkit-flex-direction: column;
-            flex-direction: column;
-            
-            -webkit-box-pack: center;
-            -webkit-justify-content: center;
-            justify-content: center;
-            
-            -webkit-box-align: center;
-            -webkit-align-items: center;
-            align-items: center;
+            left: 600px;
+            -webkit-transform: rotate(90deg);
+            -webkit-transform-origin: 0 0;
             
             text-align: center;
-            box-sizing: border-box;
-            padding: 4vh;
+            overflow: hidden;
         }
+        
+        #debug { font-size: 20px; color: #000; padding: 10px; }
         .hidden { display: none !important; }
         
-        #status-bar {
-            position: absolute;
-            top: 4vh;
-            right: 4vh;
-            font-size: 4vh;
-            font-weight: bold;
-        }
+        .box { padding-top: 80px; }
+        .huge { font-size: 100px; font-weight: bold; margin-bottom: 20px; }
+        .big { font-size: 45px; }
         
-        #clear-sky-title {
-            font-size: 15vh;
-            font-weight: bold;
-            margin-bottom: 2vh;
-        }
-        #clear-sky-subtitle {
-            font-size: 6vh;
-        }
+        .data-container { margin-top: 50px; }
+        .med { font-size: 30px; margin: 0 30px; display: inline-block; vertical-align: top; }
+        .med b { font-size: 50px; display: block; margin-top: 10px; }
         
-        #callsign {
-            font-size: 22vh;
-            font-weight: bold;
-            margin: 0;
-            line-height: 1;
-        }
-        #airline {
-            font-size: 7vh;
-            margin-top: 1vh;
-            margin-bottom: 8vh;
-        }
-        .data-grid {
-            display: -webkit-box;
-            display: -webkit-flex;
-            display: flex;
-            
-            -webkit-justify-content: space-around;
-            justify-content: space-around;
-            width: 100%;
-            margin-bottom: 2vh;
-        }
-        .data-item {
-            display: -webkit-box;
-            display: -webkit-flex;
-            display: flex;
-            
-            -webkit-box-orient: vertical;
-            -webkit-flex-direction: column;
-            flex-direction: column;
-            
-            -webkit-box-align: center;
-            -webkit-align-items: center;
-            align-items: center;
-        }
-        .data-label {
-            font-size: 3.5vh;
-            text-transform: uppercase;
-        }
-        .data-value {
-            font-size: 7vh;
-            font-weight: bold;
-        }
-        #track-arrow {
-            font-size: 18vh;
-            line-height: 1;
-            margin-top: 2vh;
-        }
+        .arrow { font-size: 120px; margin-top: 30px; line-height: 1; }
     </style>
 </head>
 <body>
+    <!-- Consola de errores visible por si falla algo -->
+    <div id="debug"></div>
+    
+    <div id="status-bar" class="big" style="margin-top: 200px;">INICIANDO...</div>
 
-    <div id="status-bar">INICIANDO...</div>
-
-    <!-- Vista Cielo Despejado -->
-    <div id="view-clearsky" class="hidden">
-        <div id="clear-sky-title">CIELO DESPEJADO</div>
-        <div id="clear-sky-subtitle">Próximo vuelo a <span id="next-dist">--</span> km</div>
+    <div id="view-clearsky" class="hidden box">
+        <div class="huge">CIELO<br>DESPEJADO</div>
+        <div class="big" style="margin-top:60px">Próximo a <span id="next-dist">--</span> km</div>
     </div>
 
-    <!-- Vista Dashboard Vuelo -->
-    <div id="view-flight" class="hidden">
-        <div id="callsign">---</div>
-        <div id="airline">---</div>
-        <div class="data-grid">
-            <div class="data-item">
-                <span class="data-label">Altitud</span>
-                <span class="data-value" id="alt">-- m</span>
-            </div>
-            <div class="data-item">
-                <span class="data-label">Velocidad</span>
-                <span class="data-value" id="spd">-- km/h</span>
-            </div>
-            <div class="data-item">
-                <span class="data-label">Distancia</span>
-                <span class="data-value" id="dist">-- km</span>
-            </div>
+    <div id="view-flight" class="hidden box">
+        <div id="callsign" class="huge">---</div>
+        <div id="airline" class="big">---</div>
+        <div class="data-container">
+            <div class="med">ALTITUD<b id="alt">--</b></div>
+            <div class="med">VELOCIDAD<b id="spd">--</b></div>
+            <div class="med">DISTANCIA<b id="dist">--</b></div>
         </div>
-        <div id="track-arrow">↑</div>
+        <div id="track-arrow" class="arrow">↑</div>
     </div>
 
     <script>
-        // Usamos variables al estilo antiguo para máxima compatibilidad
+        // Detector de errores que imprime el fallo en la pantalla del Kindle
+        window.onerror = function(msg, url, line) {
+            document.getElementById('debug').innerHTML = 'Error JS: ' + msg + ' (L: ' + line + ')';
+            return false;
+        };
+
         var USER_LAT = -34.53;
         var USER_LON = -58.49;
         var API_URL = '/api/vuelos';
@@ -207,7 +128,6 @@
             return airlines[code3] || 'VUELO COMERCIAL';
         }
 
-        // Reemplazamos Fetch y Async/Await por el viejo y confiable XMLHttpRequest
         function fetchData() {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', API_URL, true);
@@ -216,7 +136,7 @@
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         var data = JSON.parse(xhr.responseText);
-                        statusBar.innerText = '';
+                        statusBar.className = 'hidden'; // Ocultamos el INICIANDO
                         
                         if (!data || !data.ac || data.ac.length === 0) {
                             showClearSky('--');
@@ -247,15 +167,15 @@
                             showClearSky('--');
                         }
                     } catch (e) {
-                        statusBar.innerText = 'ERROR DE DATOS';
+                        document.getElementById('debug').innerHTML = 'Error parseando datos';
                     }
                 } else {
-                    statusBar.innerText = 'RECONECTANDO...';
+                    document.getElementById('debug').innerHTML = 'Reconectando...';
                 }
             };
 
             xhr.onerror = function() {
-                statusBar.innerText = 'RECONECTANDO...';
+                document.getElementById('debug').innerHTML = 'Sin conexión al radar';
             };
 
             xhr.send();
@@ -263,13 +183,13 @@
 
         function showClearSky(distance) {
             viewFlight.className = 'hidden';
-            viewClearSky.className = '';
+            viewClearSky.className = 'box';
             nextDistEl.innerText = distance;
         }
 
         function showFlight(plane, distance) {
             viewClearSky.className = 'hidden';
-            viewFlight.className = '';
+            viewFlight.className = 'box';
 
             var callsign = (plane.flight || '---').trim();
             var altFt = plane.alt_baro || plane.alt_geom;
@@ -285,7 +205,6 @@
             trackArrowEl.innerText = getDirectionArrow(track);
         }
 
-        // Arrancamos!
         fetchData();
         setInterval(fetchData, 10000);
     </script>
