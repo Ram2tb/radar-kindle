@@ -3,7 +3,6 @@
 <head>
     <meta charset="utf-8">
     <title>Radar</title>
-    <!-- Importamos FontAwesome para íconos vectoriales profesionales -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -16,7 +15,6 @@
             padding: 0;
             background-color: #FFFFFF;
             color: #000000;
-            /* Forzamos Helvetica / Arial limpia */
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             
             position: absolute;
@@ -35,27 +33,29 @@
         .box { padding-top: 30px; box-sizing: border-box; width: 100%; }
         
         .title-container { margin-top: 10px; white-space: nowrap; width: 100%; }
-        .huge { font-size: 85px; font-weight: bold; display: inline-block; vertical-align: middle; margin: 0; }
+        .huge { font-size: 80px; font-weight: bold; display: inline-block; vertical-align: middle; margin: 0; }
+        .huge i { font-size: 65px; margin-right: 15px; vertical-align: middle; }
         
-        /* Ajuste para el ícono de FontAwesome del avión */
-        .huge i { font-size: 70px; margin-right: 15px; vertical-align: middle; }
+        .arrow { font-size: 65px; display: inline-block; vertical-align: middle; margin-left: 15px; }
         
-        /* Flecha de dirección (ahora usamos un ícono de flecha rotado o directo) */
-        .arrow { font-size: 70px; display: inline-block; vertical-align: middle; margin-left: 15px; }
+        .big { font-size: 38px; margin: 10px 0 25px 0; font-weight: bold; }
         
-        .big { font-size: 40px; margin: 10px 0 30px 0; font-weight: bold; }
+        /* Contenedor de datos con separación visual nítida */
+        .data-container { margin-top: 20px; width: 94%; margin-left: 3%; white-space: nowrap; }
+        .med { display: inline-block; width: 31%; font-size: 18px; vertical-align: top; color: #333; font-weight: bold; }
+        .med b { font-size: 38px; display: block; margin-top: 5px; color: #000; }
         
-        .data-container { margin-top: 20px; width: 90%; margin-left: 5%; white-space: nowrap; }
-        .med { display: inline-block; width: 32%; font-size: 20px; vertical-align: top; color: #333; font-weight: bold; }
-        .med b { font-size: 42px; display: block; margin-top: 5px; color: #000; }
+        /* Línea separadora vertical sutil entre columnas */
+        .med-sep { display: inline-block; width: 2%; font-size: 30px; color: #ccc; vertical-align: middle; }
 
-        .bottom-container { margin-top: 40px; width: 96%; margin-left: 2%; white-space: nowrap; }
+        /* Contenedor inferior optimizado */
+        .bottom-container { margin-top: 35px; width: 94%; margin-left: 3%; white-space: nowrap; border-top: 2px solid #000; padding-top: 15px; }
         .bottom-item { display: inline-block; width: 48%; vertical-align: top; }
-        .bottom-label { font-size: 24px; color: #333; letter-spacing: 2px; font-weight: bold; }
-        .bottom-value { font-size: 65px; font-weight: bold; margin-top: 5px; color: #000; }
+        .bottom-label { font-size: 22px; color: #333; letter-spacing: 2px; font-weight: bold; }
+        .bottom-value { font-size: 58px; font-weight: bold; margin-top: 5px; color: #000; }
         
-        .weather-display { font-weight: normal; margin-left: 10px; color: #333; }
-        .weather-display i { font-size: 55px; vertical-align: middle; }
+        .weather-display { font-weight: normal; margin-left: 5px; color: #333; }
+        .weather-display i { font-size: 48px; vertical-align: middle; }
     </style>
 </head>
 <body>
@@ -65,12 +65,12 @@
 
     <!-- PANTALLA CIELO DESPEJADO -->
     <div id="view-clearsky" class="hidden box">
-        <div class="huge" style="margin-top: 100px; font-size: 90px;">CLEAR SKY</div>
+        <div class="huge" style="margin-top: 80px; font-size: 85px;">CLEAR SKY</div>
         <div class="big" style="margin-top: 40px;">Next flight at <span id="next-dist">--</span> km</div>
         
-        <div class="bottom-container" style="margin-top: 60px;">
-            <div class="bottom-label">LOCAL & WX</div>
-            <div class="bottom-value">
+        <div class="bottom-container" style="margin-top: 80px; border-top: none;">
+            <div class="bottom-label">LOCAL TIME & WX</div>
+            <div class="bottom-value" style="font-size: 75px;">
                 <span class="clock-display">00:00</span><span class="weather-display" id="wx-clear"></span>
             </div>
         </div>
@@ -79,7 +79,6 @@
     <!-- PANTALLA VUELO DETECTADO -->
     <div id="view-flight" class="hidden box">
         <div class="title-container">
-            <!-- Usamos el ícono vectorial oficial de avión de FontAwesome -->
             <span id="callsign" class="huge"><i class="fa-solid fa-plane"></i>---</span>
             <span id="track-arrow" class="arrow"><i class="fa-solid fa-arrow-up"></i></span>
         </div>
@@ -87,7 +86,9 @@
         
         <div class="data-container">
             <div class="med">ALTITUDE<b id="alt">--</b></div>
+            <span class="med-sep">|</span>
             <div class="med">SPEED<b id="spd">--</b></div>
+            <span class="med-sep">|</span>
             <div class="med">DISTANCE<b id="dist">--</b></div>
         </div>
 
@@ -148,7 +149,6 @@
             'SKU': 'Sky Airline'
         };
 
-        // --- RELOJ ---
         function updateClock() {
             var d = new Date();
             var h = d.getHours();
@@ -162,14 +162,13 @@
         setInterval(updateClock, 30000); 
         updateClock();
 
-        // --- CLIMA CON ÍCONOS VECTORIALES DE FONTAWESOME ---
         function getWeatherIconHtml(code) {
-            if (code === 0) return '<i class="fa-solid fa-sun"></i>'; // Sol
-            if (code >= 1 && code <= 3) return '<i class="fa-solid fa-cloud"></i>'; // Nube
-            if (code === 45 || code === 48) return '<i class="fa-solid fa-smog"></i>'; // Niebla
-            if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return '<i class="fa-solid fa-cloud-rain"></i>'; // Lluvia
-            if ((code >= 71 && code <= 77) || code === 85 || code === 86) return '<i class="fa-solid fa-snowflake"></i>'; // Nieve
-            if (code >= 95 && code <= 99) return '<i class="fa-solid fa-cloud-bolt"></i>'; // Tormenta
+            if (code === 0) return '<i class="fa-solid fa-sun"></i>';
+            if (code >= 1 && code <= 3) return '<i class="fa-solid fa-cloud"></i>';
+            if (code === 45 || code === 48) return '<i class="fa-solid fa-smog"></i>';
+            if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return '<i class="fa-solid fa-cloud-rain"></i>';
+            if ((code >= 71 && code <= 77) || code === 85 || code === 86) return '<i class="fa-solid fa-snowflake"></i>';
+            if (code >= 95 && code <= 99) return '<i class="fa-solid fa-cloud-bolt"></i>';
             return '<i class="fa-solid fa-cloud-sun"></i>';
         }
 
@@ -182,7 +181,7 @@
                         var data = JSON.parse(xhr.responseText);
                         var temp = Math.round(data.current_weather.temperature);
                         var iconHtml = getWeatherIconHtml(data.current_weather.weathercode);
-                        var weatherHtml = ' | ' + iconHtml + ' ' + temp + '°';
+                        var weatherHtml = ' ' + iconHtml + ' ' + temp + '°';
                         
                         document.getElementById('wx-clear').innerHTML = weatherHtml;
                         document.getElementById('wx-flight').innerHTML = weatherHtml;
@@ -194,7 +193,6 @@
         fetchWeather();
         setInterval(fetchWeather, 1800000);
 
-        // --- RADAR ---
         function getHaversineDistance(lat1, lon1, lat2, lon2) {
             var R = 6371;
             var dLat = (lat2 - lat1) * Math.PI / 180;
@@ -215,10 +213,8 @@
             return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
         }
 
-        // Convertimos los grados de la ruta en la clase de rotación de la flecha de FontAwesome
         function getDirectionArrowHtml(degrees) {
             if (degrees === null || degrees === undefined) return '<i class="fa-solid fa-arrow-up"></i>';
-            // FontAwesome tiene clases directas para rotar flechas: fa-rotate-0, fa-rotate-45, etc.
             var rounded = Math.round((degrees % 360) / 45) * 45;
             return '<i class="fa-solid fa-arrow-up fa-rotate-' + rounded + '"></i>';
         }
