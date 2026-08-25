@@ -121,8 +121,7 @@
     <script>
         const USER_LAT = -34.53;
         const USER_LON = -58.49;
-        const API_URL = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://opensky-network.org/api/states/all?lamin=-35.88&lomin=-59.84&lamax=-33.18&lomax=-57.14');
-
+        const API_URL = 'https://corsproxy.io/?' + encodeURIComponent('https://opensky-network.org/api/states/all?lamin=-35.88&lomin=-59.84&lamax=-33.18&lomax=-57.14');
         const statusBar = document.getElementById('status-bar');
         const viewClearSky = document.getElementById('view-clearsky');
         const viewFlight = document.getElementById('view-flight');
@@ -246,7 +245,7 @@
         }
 
         fetchData();
-        setInterval(fetchData, 10000);
+        setInterval(fetchData, 30000);
     </script>
 </body>
 </html>
