@@ -138,6 +138,7 @@
             'ARG': 'Aerolíneas Argentinas',
             'FBZ': 'Flybondi',
             'JSM': 'JetSMART',
+            'AVA': 'Avianca',
             'LAN': 'LATAM Airlines',
             'GLO': 'GOL Linhas Aéreas',
             'AAL': 'American Airlines',
@@ -233,7 +234,7 @@
             
             // ADSB.lol devuelve pies y nudos, convertimos a metros y km/h
             const altFt = plane.alt_baro || plane.alt_geom;
-            const alt = altFt ? Math.round(altFt * 0.3048) + ' m' : '---';
+            const alt = altFt ? (altFt <= 0 ? 'En tierra' : Math.round(altFt * 0.3048) + ' m') : '---';
             const spd = plane.gs ? Math.round(plane.gs * 1.852) + ' km/h' : '---';
             const track = plane.track;
 
