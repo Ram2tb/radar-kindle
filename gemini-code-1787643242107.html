@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Radar E-ink</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background-color: #FFFFFF;
+            color: #000000;
+            font-family: Arial, Helvetica, sans-serif;
+            overflow: hidden;
+        }
+        body {
+            transform: rotate(90deg);
+            transform-origin: top left;
+            width: 100vh;
+            height: 100vw;
+            position: absolute;
+            top: 0;
+            left: 100vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            box-sizing: border-box;
+            padding: 4vh;
+        }
+        .hidden { display: none !important; }
+        
+        #status-bar {
+            position: absolute;
+            top: 4vh;
+            right: 4vh;
+            font-size: 4vh;
+            font-weight: bold;
+        }
+        
+        /* Clear Sky Styles */
+        #clear-sky-title {
+            font-size: 15vh;
+            font-weight: bold;
+            margin-bottom: 2vh;
+        }
+        #clear-sky-subtitle {
+            font-size: 6vh;
+        }
+        
+        /* Flight Dashboard Styles */
+        #callsign {
+            font-size: 22vh;
+            font-weight: bold;
+            margin: 0;
+            line-height: 1;
+        }
+        #airline {
+            font-size: 7vh;
+            margin-top: 1vh;
+            margin-bottom: 8vh;
+        }
+        .data-grid {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-bottom: 2vh;
+        }
+        .data-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .data-label {
+            font-size: 3.5vh;
+            text-transform: uppercase;
+        }
+        .data-value {
+            font-size: 7vh;
+            font-weight: bold;
+        }
+        #track-arrow {
+            font-size: 18vh;
+            line-height: 1;
+            margin-top: 2vh;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="status-bar">INICIANDO...</div>
+
+    <!-- Vista Cielo Despejado -->
+    <div id="view-clearsky" class="hidden">
+        <div id="clear-sky-title">CIELO DESPEJADO</div>
+        <div id="clear-sky-subtitle">Próximo vuelo detectado a <span id="next-dist">--</span> km acercándose</div>
+    </div>
+
+    <!-- Vista Dashboard Vuelo -->
+    <div id="view-flight" class="hidden">
+        <div id="callsign">---</div>
+        <div id="airline">---</div>
+        <div class="data-grid">
+            <div class="data-item">
+                <span class="data-label">Altitud</span>
+                <span class="data-value" id="alt">-- m</span>
+            </div>
+            <div class="data-item">
+                <span class="data-label">Velocidad</span>
+                <span class="data-value" id="spd">-- km/h</span>
+            </div>
+            <div class="data-item">
+                <span class="data-label">Distancia</span>
+                <span class="data-value" id="dist">-- km</span>
+            </div>
+        </div>
+        <div id="track-arrow">↑</div>
+    </div>
+
+    <script>
+        const USER_LAT = -34.53;
+        const USER_LON = -58.49;
+        const API_URL = 'https://opensky-network.org/api/states/all?lamin=-35.88&lomin=-59.84&lamax=-33.18&lomax=-57.14';
+
+        const statusBar = document.getElementById('status-bar');
+        const viewClearSky = document.getElementById('view-clearsky');
+        const viewFlight = document.getElementById('view-flight');
+
+        const nextDistEl = document.getElementById('next-dist');
+        const callsignEl = document.getElementById('callsign');
+        const airlineEl = document.getElementById('airline');
+        const altEl = document.getElementById('alt');
+        const spdEl = document.getElementById('spd');
+        const distEl = document.getElementById('dist');
+        const trackArrowEl = document.getElementById('track-arrow');
+
+        // Diccionario básico de aerolíneas comunes en la región
+        const airlines = {
+            'ARG': 'Aerolíneas Argentinas',
+            'FBZ': 'Flybondi',
+            'JSM': 'JetSMART',
+            'LAN': 'LATAM Airlines',
+            'GLO': 'GOL Linhas Aéreas',
+            'AAL': 'American Airlines',
+            'DAL': 'Delta Air Lines',
+            'UAL': 'United Airlines',
+            'IBE': 'Iberia',
+            'LPE': 'LATAM Perú',
+            'DSM': 'LADE',
+            'CMP': 'Copa Airlines',
+            'AZU': 'Azul Linhas Aéreas',
+            'BOV': 'Boliviana de Aviación',
+            'SKU': 'Sky Airline'
+        };
+
+        function getHaversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function getDirectionArrow(degrees) {
+            if (degrees === null || degrees === undefined) return '';
+            const arrows = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖', '↑'];
+            const index = Math.round((degrees % 360) / 45);
+            return arrows[index];
+        }
+
+        function getAirline(callsign) {
+            if (!callsign) return 'VUELO NO IDENTIFICADO';
+            const clean = callsign.trim();
+            const code3 = clean.substring(0, 3).toUpperCase();
+            return airlines[code3] || 'VUELO COMERCIAL';
+        }
+
+        async function fetchData() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('API Rate Limit o Error de red');
+                const data = await response.json();
+                
+                statusBar.innerText = '';
+                
+                if (!data || !data.states || data.states.length === 0) {
+                    showClearSky('--');
+                    return;
+                }
+
+                let closestFlight = null;
+                let minDistance = Infinity;
+
+                data.states.forEach(state => {
+                    const lat = state[6];
+                    const lon = state[5];
+                    if (lat !== null && lon !== null) {
+                        const dist = getHaversineDistance(USER_LAT, USER_LON, lat, lon);
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            closestFlight = state;
+                        }
+                    }
+                });
+
+                if (closestFlight) {
+                    if (minDistance < 20) {
+                        showFlight(closestFlight, minDistance);
+                    } else {
+                        showClearSky(minDistance.toFixed(1));
+                    }
+                } else {
+                    showClearSky('--');
+                }
+
+            } catch (error) {
+                statusBar.innerText = 'RECONECTANDO...';
+            }
+        }
+
+        function showClearSky(distance) {
+            viewFlight.classList.add('hidden');
+            viewClearSky.classList.remove('hidden');
+            nextDistEl.innerText = distance;
+        }
+
+        function showFlight(state, distance) {
+            viewClearSky.classList.add('hidden');
+            viewFlight.classList.remove('hidden');
+
+            const callsign = (state[1] || '---').trim();
+            const alt = state[7] !== null ? Math.round(state[7]) + ' m' : '---';
+            const spd = state[9] !== null ? Math.round(state[9] * 3.6) + ' km/h' : '---';
+            const track = state[10];
+
+            callsignEl.innerText = callsign;
+            airlineEl.innerText = getAirline(callsign);
+            altEl.innerText = alt;
+            spdEl.innerText = spd;
+            distEl.innerText = distance.toFixed(1) + ' km';
+            trackArrowEl.innerText = getDirectionArrow(track);
+        }
+
+        fetchData();
+        setInterval(fetchData, 10000);
+    </script>
+</body>
+</html>
