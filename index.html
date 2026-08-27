@@ -388,6 +388,68 @@
 
         fetchRadar();
         setInterval(fetchRadar, 15000);
+
+        // --- MONITOR TREN DE LA COSTA EN TIEMPO REAL (Mar y Jue | 06:30 a 08:00) ---
+        function checkTrain() {
+            var now = new Date();
+            
+            // Usamos la misma matemática bruta UTC para que el Kindle no se confunda de día ni de hora
+            var h = now.getUTCHours() - 3;
+            var day = now.getUTCDay(); // 0=Dom, 1=Lun, 2=Mar, 3=Mie, 4=Jue, 5=Vie, 6=Sab
+            
+            if (h < 0) {
+                h = h + 24;
+                day = day - 1;
+                if (day < 0) day = 6;
+            }
+            var m = now.getUTCMinutes();
+            
+            // Verificamos Martes (2) y Jueves (4)
+            var isTargetDay = (day === 2 || day === 4); 
+            var timeInMinutes = (h * 60) + m;
+            var isTargetTime = (timeInMinutes >= 390 && timeInMinutes <= 480); // 06:30 a 08:00
+            
+            var banner = document.getElementById('train-banner');
+            
+            if (isTargetDay && isTargetTime) {
+                banner.className = ''; // Mostramos el banner
+                
+                // Llamamos a la API que acabás de crear en GitHub/Vercel
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', '/api/tren', true);
+                xhr.onload = function() {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            var data = JSON.parse(xhr.responseText);
+                            var color = "#4CAF50"; // Verde
+                            
+                            if (data.status === "DEMORADO") color = "#FF9800"; // Naranja
+                            if (data.status === "CANCELADO" || data.status === "SIN SEÑAL") color = "#F44336"; // Rojo
+                            
+                            var statusEl = document.getElementById('train-status-text');
+                            statusEl.innerText = data.status;
+                            statusEl.style.color = color;
+                        } catch (e) {}
+                    }
+                };
+                xhr.send();
+            } else {
+                banner.className = 'hidden'; 
+            }
+        }
+        
+        setInterval(checkTrain, 120000); // Revisa el estado real cada 2 minutos
+        checkTrain();
+
+        <!-- BANNER DINÁMICO TREN DE LA COSTA -->
+    <div id="train-banner" class="hidden" style="position: absolute; bottom: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 15px 0; border-top: 4px solid #333; z-index: 100;">
+        <div style="font-size: 22px; font-weight: bold; letter-spacing: 2px; color: #CCC;">
+            <i class="fa-solid fa-train-tram"></i> PRÓXIMO TREN A DELTA
+        </div>
+        <div style="font-size: 65px; font-weight: bold; margin-top: 5px;" id="train-time">
+            ESTADO: <span id="train-status-text" style="font-size: 55px; font-weight: normal; color: #FFF; vertical-align: middle;">BUSCANDO...</span>
+        </div>
+    </div>
     </script>
 </body>
 </html>
