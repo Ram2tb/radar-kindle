@@ -55,15 +55,15 @@
 
     <!-- PANTALLA PRINCIPAL: RELOJ Y METEOROLOGÍA -->
     <div id="view-idle" class="hidden box">
-        <!-- Subimos y achicamos para sortear los bordes del Kindle -->
-        <div style="font-size: 130px; font-weight: bold; margin-top: 85px; letter-spacing: -2px; line-height: 1;" class="clock-display">00:00</div>
+        <!-- Reloj empujado un 15% más abajo (margin-top 170px) -->
+        <div style="font-size: 130px; font-weight: bold; margin-top: 170px; letter-spacing: -2px; line-height: 1;" class="clock-display">00:00</div>
         
-        <div style="font-size: 60px; margin-top: 15px; line-height: 1;">
+        <div style="font-size: 60px; margin-top: 25px; line-height: 1;">
             <span id="wx-icon"><i class="fa-solid fa-sun"></i></span>
             <span id="wx-temp" style="margin-left: 15px; font-weight: bold;">--°</span>
         </div>
 
-        <div class="data-container" style="margin-top: 25px; border-top: 2px solid #000; padding-top: 15px;">
+        <div class="data-container" style="margin-top: 45px; border-top: 2px solid #000; padding-top: 20px;">
             <div class="med" style="width: 30%;">WIND<b id="wx-wind">-- km/h</b></div>
             <span class="med-sep">|</span>
             <div class="med" style="width: 30%;">HUMIDITY<b id="wx-hum">--%</b></div>
@@ -74,7 +74,6 @@
 
     <!-- PANTALLA ALERTA: VUELO DETECTADO (< 5 MINUTOS) -->
     <div id="view-flight" class="hidden box">
-        <!-- Margin top de 145px para despegarlo bien del cartel del tren -->
         <div class="title-container" style="margin-top: 145px; line-height: 1;">
             <span id="airline" style="font-size: 52px; font-weight: bold; display: inline-block; vertical-align: middle; max-width: 80%; line-height: 1.1;">---</span>
             <span id="track-arrow" class="arrow"><i class="fa-solid fa-arrow-up"></i></span>
