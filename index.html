@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Radar</title>
+    <title>Radar & Weather</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -19,7 +19,9 @@
         }
         #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; z-index: 10; }
         .hidden { display: none !important; }
-        .box { padding-top: 30px; box-sizing: border-box; width: 100%; }
+        .box { padding-top: 15px; box-sizing: border-box; width: 100%; }
+        
+        /* Clases Vuelos */
         .title-container { margin-top: 10px; white-space: nowrap; width: 100%; }
         .huge { font-size: 80px; font-weight: bold; display: inline-block; vertical-align: middle; margin: 0; }
         .huge i { font-size: 65px; margin-right: 15px; vertical-align: middle; }
@@ -41,22 +43,40 @@
     <div id="debug"></div>
     <div id="status-bar" class="big" style="margin-top: 250px;">INITIALIZING...</div>
 
-    <!-- PANTALLA CIELO DESPEJADO -->
-    <div id="view-clearsky" class="hidden box">
-        <div class="huge" style="margin-top: 80px; font-size: 85px;">CLEAR SKY</div>
-        <div class="big" style="margin-top: 40px;">Next flight at <span id="next-dist">--</span> km</div>
-        
-        <div class="bottom-container" style="margin-top: 80px; border-top: none;">
-            <div class="bottom-label">LOCAL TIME & WX</div>
-            <div class="bottom-value" style="font-size: 75px;">
-                <span class="clock-display">00:00</span><span class="weather-display" id="wx-clear"></span>
-            </div>
+    <!-- BANNER DINÁMICO TREN DE LA COSTA (Ahora cae desde ARRIBA) -->
+    <div id="train-banner" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 15px 0; border-bottom: 4px solid #333; z-index: 100;">
+        <div style="font-size: 22px; font-weight: bold; letter-spacing: 2px; color: #CCC;">
+            <i class="fa-solid fa-train-tram"></i> PRÓXIMO TREN A DELTA
+        </div>
+        <div style="font-size: 65px; font-weight: bold; margin-top: 5px;" id="train-time">
+            ESTADO: <span id="train-status-text" style="font-size: 55px; font-weight: normal; color: #FFF; vertical-align: middle;">BUSCANDO...</span>
         </div>
     </div>
 
-    <!-- PANTALLA VUELO DETECTADO -->
+    <!-- PANTALLA PRINCIPAL: RELOJ Y METEOROLOGÍA -->
+    <div id="view-idle" class="hidden box">
+        <!-- Reloj gigante en el centro, empujado un poco abajo para dejarle espacio al banner del tren si aparece -->
+        <div style="font-size: 150px; font-weight: bold; margin-top: 110px; letter-spacing: -2px;" class="clock-display">00:00</div>
+        
+        <!-- Temperatura principal -->
+        <div style="font-size: 70px; margin-top: 10px;">
+            <span id="wx-icon"><i class="fa-solid fa-sun"></i></span>
+            <span id="wx-temp" style="margin-left: 15px; font-weight: bold;">--°</span>
+        </div>
+
+        <!-- Datos extendidos de clima -->
+        <div class="data-container" style="margin-top: 60px; border-top: 2px solid #000; padding-top: 25px;">
+            <div class="med" style="width: 30%;">WIND<b id="wx-wind">-- km/h</b></div>
+            <span class="med-sep">|</span>
+            <div class="med" style="width: 30%;">HUMIDITY<b id="wx-hum">--%</b></div>
+            <span class="med-sep">|</span>
+            <div class="med" style="width: 30%;">RAIN PROB<b id="wx-pop">--%</b></div>
+        </div>
+    </div>
+
+    <!-- PANTALLA ALERTA: VUELO DETECTADO (< 5 MINUTOS) -->
     <div id="view-flight" class="hidden box">
-        <div class="title-container">
+        <div class="title-container" style="margin-top: 30px;">
             <span id="callsign" class="huge"><i class="fa-solid fa-plane"></i>---</span>
             <span id="track-arrow" class="arrow"><i class="fa-solid fa-arrow-up"></i></span>
         </div>
@@ -84,35 +104,21 @@
         </div>
     </div>
 
-    <!-- BANNER DINÁMICO TREN DE LA COSTA -->
-    <div id="train-banner" class="hidden" style="position: absolute; bottom: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 15px 0; border-top: 4px solid #333; z-index: 100;">
-        <div style="font-size: 22px; font-weight: bold; letter-spacing: 2px; color: #CCC;">
-            <i class="fa-solid fa-train-tram"></i> PRÓXIMO TREN A DELTA
-        </div>
-        <div style="font-size: 65px; font-weight: bold; margin-top: 5px;" id="train-time">
-            ESTADO: <span id="train-status-text" style="font-size: 55px; font-weight: normal; color: #FFF; vertical-align: middle;">BUSCANDO...</span>
-        </div>
-    </div>
-
     <script>
-        // ==========================================
-        // LLAVE MAESTRA: Ponelo en 'false' para que 
-        // solo funcione los Mar y Jue de 06:00 a 08:00
-        // ==========================================
-        var MODO_PRUEBA_TREN = true;
+        var MODO_PRUEBA_TREN = true; // CAMBIAR A FALSE PARA QUE SEA AUTOMÁTICO
 
         var USER_LAT = -34.53;
         var USER_LON = -58.49;
         
         var RADAR_API_URL = '/api/vuelos';
-        var WEATHER_API_URL = 'https://api.open-meteo.com/v1/forecast?latitude=' + USER_LAT + '&longitude=' + USER_LON + '&current_weather=true';
+        // Nueva API de clima con datos de viento, humedad y probabilidad de lluvia
+        var WEATHER_API_URL = 'https://api.open-meteo.com/v1/forecast?latitude=' + USER_LAT + '&longitude=' + USER_LON + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=precipitation_probability_max&timezone=America%2FArgentina%2FBuenos_Aires';
 
         var statusBar = document.getElementById('status-bar');
-        var viewClearSky = document.getElementById('view-clearsky');
+        var viewIdle = document.getElementById('view-idle');
         var viewFlight = document.getElementById('view-flight');
         var debugEl = document.getElementById('debug');
 
-        var nextDistEl = document.getElementById('next-dist');
         var callsignEl = document.getElementById('callsign');
         var airlineEl = document.getElementById('airline');
         var altEl = document.getElementById('alt');
@@ -163,11 +169,23 @@
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         var data = JSON.parse(xhr.responseText);
-                        var temp = Math.round(data.current_weather.temperature);
-                        var iconHtml = getWeatherIconHtml(data.current_weather.weathercode);
-                        var weatherHtml = ' ' + iconHtml + ' ' + temp + '°';
-                        document.getElementById('wx-clear').innerHTML = weatherHtml;
-                        document.getElementById('wx-flight').innerHTML = weatherHtml;
+                        var curr = data.current;
+                        
+                        var temp = Math.round(curr.temperature_2m) + '°';
+                        var hum = Math.round(curr.relative_humidity_2m) + '%';
+                        var wind = Math.round(curr.wind_speed_10m) + ' km/h';
+                        var pop = data.daily.precipitation_probability_max[0] + '%';
+                        var iconHtml = getWeatherIconHtml(curr.weather_code);
+                        
+                        // Panel por defecto (Idle)
+                        document.getElementById('wx-icon').innerHTML = iconHtml;
+                        document.getElementById('wx-temp').innerText = temp;
+                        document.getElementById('wx-hum').innerText = hum;
+                        document.getElementById('wx-wind').innerText = wind;
+                        document.getElementById('wx-pop').innerText = pop;
+
+                        // Tablerito de abajo cuando hay un avión
+                        document.getElementById('wx-flight').innerHTML = ' ' + iconHtml + ' ' + temp;
                     } catch (e) {}
                 }
             };
@@ -214,28 +232,41 @@
                         var data = JSON.parse(xhr.responseText);
                         statusBar.className = 'hidden'; 
                         debugEl.innerHTML = ''; 
+                        
                         if (!data || !data.ac || data.ac.length === 0) {
-                            showClearSky('--'); return;
+                            showIdle(); return;
                         }
+
                         var currentDistances = {}, currentStates = {}, closestFlight = null, minDistance = Infinity;
+                        
                         for (var i = 0; i < data.ac.length; i++) {
                             var plane = data.ac[i];
                             if (plane.lat && plane.lon) {
                                 var dist = getHaversineDistance(USER_LAT, USER_LON, plane.lat, plane.lon);
                                 var planeId = (plane.flight || plane.hex || 'UNK').trim();
                                 currentDistances[planeId] = dist;
+                                
                                 var stateObj = planeStates[planeId] || { phase: 'UNKNOWN', graceTicks: 0 };
                                 var isApproaching = false;
+                                
+                                // Lógica de alejamiento
                                 if (previousDistances[planeId] !== undefined) {
                                     if (dist > previousDistances[planeId] + 0.05) {
-                                        if (stateObj.phase === 'APPROACHING') { stateObj.phase = 'LEAVING'; stateObj.graceTicks = 4; }
+                                        if (stateObj.phase === 'APPROACHING') { 
+                                            stateObj.phase = 'LEAVING'; 
+                                            stateObj.graceTicks = 8; // 8 ticks de 15seg = 2 MINUTOS exactos mostrándolo después de pasar
+                                        }
                                         else if (stateObj.phase === 'LEAVING') { if (stateObj.graceTicks > 0) stateObj.graceTicks--; }
                                         else { stateObj.phase = 'LEAVING'; stateObj.graceTicks = 0; }
                                     } else if (dist < previousDistances[planeId] - 0.05) {
                                         stateObj.phase = 'APPROACHING'; isApproaching = true;
                                     }
-                                } else { isApproaching = true; }
+                                } else { 
+                                    isApproaching = true; 
+                                }
+                                
                                 currentStates[planeId] = stateObj;
+
                                 var isPointingToUs = true;
                                 if (plane.track !== null && plane.track !== undefined) {
                                     var bearingToUs = getBearing(plane.lat, plane.lon, USER_LAT, USER_LON);
@@ -243,18 +274,33 @@
                                     if (headingDiff > 180) headingDiff = 360 - headingDiff;
                                     if (headingDiff > 60) isPointingToUs = false;
                                 }
-                                var isEligible = ((isApproaching || stateObj.phase === 'UNKNOWN') && isPointingToUs) || (stateObj.phase === 'LEAVING' && stateObj.graceTicks > 0);
+
+                                // Cálculo de ETA en minutos para saber si amerita prender la pantalla
+                                var spdKmH = plane.gs ? (plane.gs * 1.852) : null;
+                                var etaMin = (spdKmH !== null && spdKmH > 20) ? ((dist / spdKmH) * 60) : 999;
+
+                                // --- LA NUEVA LEY DE LOS 5 MINUTOS ---
+                                // Solo se considera elegible si ETA es menor a 5.5 min y viene hacia nosotros,
+                                // O si acaba de pasarnos por arriba y le quedan ticks de gracia (2 mins max)
+                                var isEligible = false;
+                                if (isApproaching && isPointingToUs && etaMin <= 5.5) {
+                                    isEligible = true;
+                                } else if (stateObj.phase === 'LEAVING' && stateObj.graceTicks > 0) {
+                                    isEligible = true;
+                                }
+
                                 if (isEligible && dist < minDistance) {
                                     minDistance = dist; closestFlight = plane;
                                 }
                             }
                         }
+                        
                         previousDistances = currentDistances; planeStates = currentStates; 
+                        
                         if (closestFlight) {
-                            if (minDistance < 20) showFlight(closestFlight, minDistance);
-                            else showClearSky(minDistance.toFixed(1));
+                            showFlight(closestFlight, minDistance);
                         } else {
-                            showClearSky('--');
+                            showIdle();
                         }
                     } catch (e) {
                         debugEl.innerHTML = 'Data error';
@@ -267,12 +313,15 @@
             xhr.send();
         }
 
-        function showClearSky(distance) {
-            viewFlight.className = 'hidden'; viewClearSky.className = 'box'; nextDistEl.innerText = distance;
+        function showIdle() {
+            viewFlight.className = 'hidden'; 
+            viewIdle.className = 'box'; 
         }
 
         function showFlight(plane, distance) {
-            viewClearSky.className = 'hidden'; viewFlight.className = 'box';
+            viewIdle.className = 'hidden'; 
+            viewFlight.className = 'box';
+            
             var callsign = (plane.flight || '---').trim();
             var altFt = plane.alt_baro || plane.alt_geom;
             var alt = '---';
@@ -283,11 +332,13 @@
             }
             var spdKmH = plane.gs ? (plane.gs * 1.852) : null;
             var spd = spdKmH !== null ? Math.round(spdKmH) + ' km/h' : '---';
+            
             var etaText = '---';
             if (spdKmH !== null && spdKmH > 20) { 
                 var etaMin = (distance / spdKmH) * 60;
                 etaText = (etaMin < 1) ? '< 1 min' : Math.round(etaMin) + ' min';
             } else if (spdKmH !== null && spdKmH <= 20) { etaText = 'N/A'; }
+            
             callsignEl.innerHTML = '<i class="fa-solid fa-plane"></i> ' + callsign;
             airlineEl.innerText = getAirline(callsign); altEl.innerText = alt; spdEl.innerText = spd;
             distEl.innerText = distance.toFixed(1) + ' km'; etaEl.innerText = etaText;
@@ -296,7 +347,7 @@
 
         fetchRadar(); setInterval(fetchRadar, 15000);
 
-       // --- MONITOR TREN DE LA COSTA EN TIEMPO REAL ---
+        // --- MONITOR TREN DE LA COSTA (E-INK FRIENDLY & TOP POSITION) ---
         function checkTrain() {
             var now = new Date();
             var h = now.getUTCHours() - 3;
@@ -312,59 +363,52 @@
             
             if (MODO_PRUEBA_TREN || (isTargetDay && isTargetTime)) {
                 
-                // 1. CALCULAMOS EL PRÓXIMO TREN
-                // Horarios exactos de tu novia: 06:50 (410), 07:10 (430), 07:30 (450)
-                var schedules = [410, 430, 450];
+                var schedules = [410, 430, 450]; // 06:50, 07:10, 07:30
                 var nextTrainMins = -1;
-                
                 for (var i = 0; i < schedules.length; i++) {
                     if (schedules[i] > timeInMinutes) {
-                        nextTrainMins = schedules[i];
-                        break;
+                        nextTrainMins = schedules[i]; break;
                     }
                 }
                 
-                // Si ya pasó el último tren de las 07:30 (y no estamos en modo prueba), ocultamos el banner
                 if (nextTrainMins === -1 && !MODO_PRUEBA_TREN) {
-                    banner.className = 'hidden';
-                    return;
+                    banner.className = 'hidden'; return;
                 }
                 
-                // Si estás en MODO_PRUEBA_TREN a cualquier otra hora de la tarde/noche, inventa uno en 15 min para testear
                 if (nextTrainMins === -1 && MODO_PRUEBA_TREN) {
                     nextTrainMins = timeInMinutes + 15;
                 }
                 
-                banner.className = ''; // Mostramos el banner
+                banner.className = ''; 
                 
-                // Convertimos esos minutos a formato HH:MM
                 var nextH = Math.floor(nextTrainMins / 60) % 24;
                 var nextM = nextTrainMins % 60;
                 var timeStr = (nextH < 10 ? '0' + nextH : nextH) + ':' + (nextM < 10 ? '0' + nextM : nextM);
 
-                // Mostramos el cartel de "Buscando..."
-                document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: #CCC; vertical-align: middle;">| BUSCANDO...</span>';
+                document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: #FFF; vertical-align: middle;">| BUSCANDO...</span>';
 
-                // 2. BUSCAMOS EL ESTADO REAL EN VERCEL
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', '/api/tren', true);
                 xhr.onload = function() {
                     if (xhr.status >= 200 && xhr.status < 300) {
                         try {
                             var data = JSON.parse(xhr.responseText);
-                            var color = "#4CAF50"; // Verde
-                            if (data.status === "DEMORADO") color = "#FF9800"; // Naranja
-                            if (data.status === "CANCELADO" || data.status === "SIN SEÑAL") color = "#F44336"; // Rojo
                             
-                            // Imprimimos la HORA exacta calculada + EL ESTADO real
-                            document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: ' + color + '; vertical-align: middle;">| ' + data.status + '</span>';
+                            // COLORES ELIMINADOS: Todo blanco (#FFF) para máxima legibilidad en tinta electrónica.
+                            // Agregamos un ícono de advertencia si no está a horario.
+                            var prefix = "";
+                            if (data.status === "DEMORADO" || data.status === "CANCELADO") {
+                                prefix = "⚠️ ";
+                            }
+                            
+                            document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: #FFF; vertical-align: middle;">| ' + prefix + data.status + '</span>';
                         } catch (e) {}
                     } else {
-                        document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: #FF9800; vertical-align: middle;">| API PENDIENTE</span>';
+                        document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: #FFF; vertical-align: middle;">| API PENDIENTE</span>';
                     }
                 };
                 xhr.onerror = function() {
-                    document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: #F44336; vertical-align: middle;">| ERROR RED</span>';
+                    document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: #FFF; vertical-align: middle;">| ERROR RED</span>';
                 }
                 xhr.send();
             } else {
