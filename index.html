@@ -101,7 +101,16 @@
             </div>
         </div>
     </div>
-
+    
+<!-- BANNER SPOTIFY (Abajo de todo) -->
+    <div id="spotify-banner" class="hidden" style="position: absolute; bottom: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 15px 0; border-top: 4px solid #333; z-index: 100;">
+        <div style="font-size: 40px; font-weight: bold; margin-bottom: 5px; line-height: 1.1; white-space: normal; padding: 0 20px;">
+            <i class="fa-brands fa-spotify" style="margin-right: 15px;"></i>
+            <span id="sp-title">Buscando...</span>
+        </div>
+        <div style="font-size: 26px; color: #CCC; margin-top: 5px; line-height: 1; white-space: normal; padding: 0 20px;" id="sp-artist">---</div>
+    </div>
+    
     <script>
         var MODO_PRUEBA_TREN = true; // CAMBIAR A FALSE PARA QUE SEA AUTOMÁTICO
 
@@ -409,6 +418,34 @@
         }
         setInterval(checkTrain, 120000); 
         checkTrain();
+
+        // --- SPOTIFY EN TIEMPO REAL ---
+        function checkSpotify() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/spotify', true);
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        var data = JSON.parse(xhr.responseText);
+                        var banner = document.getElementById('spotify-banner');
+                        
+                        // Si está escuchando música en este instante, mostramos el cartel abajo
+                        if (data.isPlaying) {
+                            document.getElementById('sp-title').innerText = data.title;
+                            document.getElementById('sp-artist').innerText = data.artist;
+                            banner.className = '';
+                        } else {
+                            // Si pausa la música, ocultamos el cartel
+                            banner.className = 'hidden';
+                        }
+                    } catch (e) {}
+                }
+            };
+            xhr.send();
+        }
+        
+        setInterval(checkSpotify, 10000); // Revisa qué suena cada 10 segundos
+        checkSpotify();
 
     </script>
 </body>
