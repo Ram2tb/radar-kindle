@@ -43,7 +43,7 @@
     <div id="debug"></div>
     <div id="status-bar" class="big" style="margin-top: 250px;">INITIALIZING...</div>
 
-    <!-- BANNER DINÁMICO TREN DE LA COSTA (Z-Index alto para prioridad) -->
+    <!-- BANNER DINÁMICO TREN DE LA COSTA -->
     <div id="train-banner" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 10px 0; border-bottom: 4px solid #333; z-index: 100;">
         <div style="font-size: 20px; font-weight: bold; letter-spacing: 2px; color: #CCC; line-height: 1;">
             <i class="fa-solid fa-train-tram"></i> PRÓXIMO TREN A TIGRE
@@ -53,7 +53,7 @@
         </div>
     </div>
 
-    <!-- BANNER SPOTIFY (Arriba también, pero se oculta si hay tren) -->
+    <!-- BANNER SPOTIFY -->
     <div id="spotify-banner" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 15px 0; border-bottom: 4px solid #333; z-index: 90;">
         <div style="font-size: 40px; font-weight: bold; margin-bottom: 5px; line-height: 1.1; white-space: normal; padding: 0 20px;">
             <i class="fa-brands fa-spotify" style="margin-right: 15px;"></i>
@@ -64,7 +64,8 @@
 
     <!-- PANTALLA PRINCIPAL: RELOJ Y METEOROLOGÍA -->
     <div id="view-idle" class="hidden box">
-        <div style="font-size: 130px; font-weight: bold; margin-top: 170px; letter-spacing: -2px; line-height: 1;" class="clock-display">00:00</div>
+        <!-- Reloj gigante con separador dinámico -->
+        <div style="font-size: 130px; font-weight: bold; margin-top: 170px; letter-spacing: -2px; line-height: 1;" class="clock-display">00<span class="clock-sep" style="opacity: 1;">:</span>00</div>
         
         <div style="font-size: 60px; margin-top: 25px; line-height: 1;">
             <span id="wx-icon"><i class="fa-solid fa-sun"></i></span>
@@ -72,11 +73,11 @@
         </div>
 
         <div class="data-container" style="margin-top: 45px; border-top: 2px solid #000; padding-top: 20px;">
-            <div class="med" style="width: 30%;">WIND<b id="wx-wind">-- km/h</b></div>
+            <div class="med" style="width: 30%;">WIND 🧭<b id="wx-wind">-- km/h</b></div>
             <span class="med-sep">|</span>
-            <div class="med" style="width: 30%;">HUMIDITY<b id="wx-hum">--%</b></div>
+            <div class="med" style="width: 30%;">HUMIDITY 💧<b id="wx-hum">--%</b></div>
             <span class="med-sep">|</span>
-            <div class="med" style="width: 30%;">RAIN<b id="wx-pop">--%</b></div>
+            <div class="med" style="width: 30%;">RAIN ☔<b id="wx-pop">--%</b></div>
         </div>
     </div>
 
@@ -100,7 +101,7 @@
             <div class="bottom-item">
                 <div class="bottom-label">LOCAL & WX</div>
                 <div class="bottom-value">
-                    <span class="clock-display">00:00</span><span class="weather-display" id="wx-flight"></span>
+                    <span class="clock-display">00<span class="clock-sep" style="opacity: 1;">:</span>00</span><span class="weather-display" id="wx-flight"></span>
                 </div>
             </div>
             <div class="bottom-item">
@@ -111,14 +112,8 @@
     </div>
 
     <script>
-        // ==========================================
-        // MODO PRUEBA TREN
-        // Cambialo a false para probar que Spotify
-        // aparezca en su lugar sin que el tren lo pise
-        // ==========================================
         var MODO_PRUEBA_TREN = false; 
-
-        var TREN_ACTIVO = false; // Variable global para prioridades
+        var TREN_ACTIVO = false; 
 
         var USER_LAT = -34.53;
         var USER_LON = -58.49;
@@ -151,18 +146,28 @@
             'LRC': 'Avianca'
         };
 
+        // --- RELOJ CON DOS PUNTOS PARPADEANTES ---
+        var colonVisible = true;
         function updateClock() {
             var d = new Date();
             var h = d.getUTCHours() - 3;
             if (h < 0) h = h + 24;
             var m = d.getUTCMinutes();
-            var timeStr = (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
+            
+            var hoursStr = (h < 10 ? '0' + h : h);
+            var minsStr = (m < 10 ? '0' + m : m);
+            
+            // Alternamos la visibilidad de los dos puntos
+            colonVisible = !colonVisible;
+            var sepHtml = '<span class="clock-sep" style="opacity: ' + (colonVisible ? '1' : '0') + ';">:</span>';
+            var timeHtml = hoursStr + sepHtml + minsStr;
+            
             var clocks = document.getElementsByClassName('clock-display');
             for(var i = 0; i < clocks.length; i++) {
-                clocks[i].innerText = timeStr;
+                clocks[i].innerHTML = timeHtml;
             }
         }
-        setInterval(updateClock, 30000); 
+        setInterval(updateClock, 1000); // Se actualiza cada 1 segundo para lograr el parpadeo fluido
         updateClock();
 
         function getWeatherIconHtml(code) {
@@ -438,7 +443,6 @@
                         var data = JSON.parse(xhr.responseText);
                         var banner = document.getElementById('spotify-banner');
                         
-                        // Si está escuchando música Y el tren no está usando el espacio
                         if (data.isPlaying && !TREN_ACTIVO) {
                             document.getElementById('sp-title').innerText = data.title;
                             document.getElementById('sp-artist').innerText = data.artist;
