@@ -19,23 +19,24 @@
         }
         #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; z-index: 10; }
         .hidden { display: none !important; }
-        .box { padding-top: 15px; box-sizing: border-box; width: 100%; }
+        .box { box-sizing: border-box; width: 100%; }
         
         /* Clases Vuelos */
-        .title-container { margin-top: 10px; white-space: normal; width: 100%; padding: 0 20px; box-sizing: border-box; }
-        .arrow { font-size: 65px; display: inline-block; vertical-align: middle; margin-left: 15px; }
-        .big { font-size: 38px; margin: 10px 0 25px 0; font-weight: bold; }
+        .title-container { white-space: normal; width: 100%; padding: 0 20px; box-sizing: border-box; }
+        .arrow { font-size: 60px; display: inline-block; vertical-align: middle; margin-left: 15px; }
+        .big { font-size: 38px; margin: 5px 0 15px 0; font-weight: bold; }
         
         .data-container { margin-top: 20px; width: 94%; margin-left: 3%; white-space: nowrap; }
-        .med { display: inline-block; width: 31%; font-size: 18px; vertical-align: top; color: #333; font-weight: bold; }
-        .med b { font-size: 38px; display: block; margin-top: 5px; color: #000; }
+        .med { display: inline-block; width: 31%; font-size: 18px; vertical-align: top; color: #333; font-weight: bold; line-height: 1; }
+        .med b { font-size: 38px; display: block; margin-top: 5px; color: #000; line-height: 1; }
         .med-sep { display: inline-block; width: 2%; font-size: 30px; color: #ccc; vertical-align: middle; }
-        .bottom-container { margin-top: 35px; width: 94%; margin-left: 3%; white-space: nowrap; border-top: 2px solid #000; padding-top: 15px; }
+        
+        .bottom-container { margin-top: 25px; width: 94%; margin-left: 3%; white-space: nowrap; border-top: 2px solid #000; padding-top: 15px; }
         .bottom-item { display: inline-block; width: 48%; vertical-align: top; }
-        .bottom-label { font-size: 22px; color: #333; letter-spacing: 2px; font-weight: bold; }
-        .bottom-value { font-size: 58px; font-weight: bold; margin-top: 5px; color: #000; }
+        .bottom-label { font-size: 22px; color: #333; letter-spacing: 2px; font-weight: bold; line-height: 1; }
+        .bottom-value { font-size: 55px; font-weight: bold; margin-top: 5px; color: #000; line-height: 1; }
         .weather-display { font-weight: normal; margin-left: 5px; color: #333; }
-        .weather-display i { font-size: 48px; vertical-align: middle; }
+        .weather-display i { font-size: 45px; vertical-align: middle; }
     </style>
 </head>
 <body>
@@ -43,42 +44,43 @@
     <div id="status-bar" class="big" style="margin-top: 250px;">INITIALIZING...</div>
 
     <!-- BANNER DINÁMICO TREN DE LA COSTA -->
-    <div id="train-banner" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 15px 0; border-bottom: 4px solid #333; z-index: 100;">
-        <div style="font-size: 22px; font-weight: bold; letter-spacing: 2px; color: #CCC;">
+    <!-- Un poco más compacto para no robar tanta pantalla -->
+    <div id="train-banner" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 10px 0; border-bottom: 4px solid #333; z-index: 100;">
+        <div style="font-size: 20px; font-weight: bold; letter-spacing: 2px; color: #CCC; line-height: 1;">
             <i class="fa-solid fa-train-tram"></i> PRÓXIMO TREN A DELTA
         </div>
-        <div style="font-size: 65px; font-weight: bold; margin-top: 5px;" id="train-time">
-            ESTADO: <span id="train-status-text" style="font-size: 55px; font-weight: normal; color: #FFF; vertical-align: middle;">BUSCANDO...</span>
+        <div style="font-size: 55px; font-weight: bold; margin-top: 5px; line-height: 1;" id="train-time">
+            ESTADO: <span id="train-status-text" style="font-size: 45px; font-weight: normal; color: #FFF; vertical-align: middle;">BUSCANDO...</span>
         </div>
     </div>
 
     <!-- PANTALLA PRINCIPAL: RELOJ Y METEOROLOGÍA -->
     <div id="view-idle" class="hidden box">
-        <!-- Bajamos el reloj a margin-top: 155px para que pase por abajo del banner negro holgadamente -->
-        <div style="font-size: 150px; font-weight: bold; margin-top: 155px; letter-spacing: -2px;" class="clock-display">00:00</div>
+        <!-- Reloj configurado al milímetro con line-height: 1 para que no desplace lo de abajo -->
+        <div style="font-size: 135px; font-weight: bold; margin-top: 130px; letter-spacing: -2px; line-height: 1;" class="clock-display">00:00</div>
         
-        <div style="font-size: 70px; margin-top: 5px;">
+        <div style="font-size: 65px; margin-top: 10px; line-height: 1;">
             <span id="wx-icon"><i class="fa-solid fa-sun"></i></span>
             <span id="wx-temp" style="margin-left: 15px; font-weight: bold;">--°</span>
         </div>
 
-        <div class="data-container" style="margin-top: 50px; border-top: 2px solid #000; padding-top: 25px;">
+        <div class="data-container" style="margin-top: 35px; border-top: 2px solid #000; padding-top: 20px;">
             <div class="med" style="width: 30%;">WIND<b id="wx-wind">-- km/h</b></div>
             <span class="med-sep">|</span>
             <div class="med" style="width: 30%;">HUMIDITY<b id="wx-hum">--%</b></div>
             <span class="med-sep">|</span>
-            <div class="med" style="width: 30%;">RAIN PROB<b id="wx-pop">--%</b></div>
+            <div class="med" style="width: 30%;">RAIN<b id="wx-pop">--%</b></div>
         </div>
     </div>
 
     <!-- PANTALLA ALERTA: VUELO DETECTADO (< 5 MINUTOS) -->
     <div id="view-flight" class="hidden box">
-        <!-- Aerolínea en gigante y el callsign abajo con el avioncito -->
-        <div class="title-container" style="margin-top: 40px;">
+        <!-- El bloque de vuelo ahora arranca más abajo (margin-top 120) por si convive con el tren -->
+        <div class="title-container" style="margin-top: 120px; line-height: 1;">
             <span id="airline" style="font-size: 52px; font-weight: bold; display: inline-block; vertical-align: middle; max-width: 80%; line-height: 1.1;">---</span>
             <span id="track-arrow" class="arrow"><i class="fa-solid fa-arrow-up"></i></span>
         </div>
-        <div id="callsign-display" class="big" style="margin-top: 10px; color: #333;"><i class="fa-solid fa-plane"></i> ---</div>
+        <div id="callsign-display" class="big" style="color: #333; line-height: 1;"><i class="fa-solid fa-plane"></i> ---</div>
         
         <div class="data-container">
             <div class="med">ALTITUDE<b id="alt">--</b></div>
@@ -103,11 +105,7 @@
     </div>
 
     <script>
-        // ==========================================
-        // MODO PRUEBA: Cambialo a false para que 
-        // el tren funcione solo Mar y Jue 06:00 a 08:00
-        // ==========================================
-        var MODO_PRUEBA_TREN = true; 
+        var MODO_PRUEBA_TREN = true; // CAMBIAR A FALSE PARA QUE SEA AUTOMÁTICO
 
         var USER_LAT = -34.53;
         var USER_LON = -58.49;
@@ -252,7 +250,7 @@
                                     if (dist > previousDistances[planeId] + 0.05) {
                                         if (stateObj.phase === 'APPROACHING') { 
                                             stateObj.phase = 'LEAVING'; 
-                                            stateObj.graceTicks = 8; // 2 minutos congelado al irse
+                                            stateObj.graceTicks = 8; 
                                         }
                                         else if (stateObj.phase === 'LEAVING') { if (stateObj.graceTicks > 0) stateObj.graceTicks--; }
                                         else { stateObj.phase = 'LEAVING'; stateObj.graceTicks = 0; }
@@ -316,7 +314,6 @@
             viewIdle.className = 'hidden'; 
             viewFlight.className = 'box';
             
-            // Lógica inteligente para nombre de vuelo y aerolínea
             var rawCallsign = plane.flight ? plane.flight.trim() : '';
             var hexCode = plane.hex ? plane.hex.trim().toUpperCase() : '';
             
