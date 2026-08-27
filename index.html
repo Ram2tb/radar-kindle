@@ -22,11 +22,10 @@
         .box { padding-top: 15px; box-sizing: border-box; width: 100%; }
         
         /* Clases Vuelos */
-        .title-container { margin-top: 10px; white-space: nowrap; width: 100%; }
-        .huge { font-size: 80px; font-weight: bold; display: inline-block; vertical-align: middle; margin: 0; }
-        .huge i { font-size: 65px; margin-right: 15px; vertical-align: middle; }
+        .title-container { margin-top: 10px; white-space: normal; width: 100%; padding: 0 20px; box-sizing: border-box; }
         .arrow { font-size: 65px; display: inline-block; vertical-align: middle; margin-left: 15px; }
         .big { font-size: 38px; margin: 10px 0 25px 0; font-weight: bold; }
+        
         .data-container { margin-top: 20px; width: 94%; margin-left: 3%; white-space: nowrap; }
         .med { display: inline-block; width: 31%; font-size: 18px; vertical-align: top; color: #333; font-weight: bold; }
         .med b { font-size: 38px; display: block; margin-top: 5px; color: #000; }
@@ -43,7 +42,7 @@
     <div id="debug"></div>
     <div id="status-bar" class="big" style="margin-top: 250px;">INITIALIZING...</div>
 
-    <!-- BANNER DINÁMICO TREN DE LA COSTA (Ahora cae desde ARRIBA) -->
+    <!-- BANNER DINÁMICO TREN DE LA COSTA -->
     <div id="train-banner" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 15px 0; border-bottom: 4px solid #333; z-index: 100;">
         <div style="font-size: 22px; font-weight: bold; letter-spacing: 2px; color: #CCC;">
             <i class="fa-solid fa-train-tram"></i> PRÓXIMO TREN A DELTA
@@ -55,17 +54,15 @@
 
     <!-- PANTALLA PRINCIPAL: RELOJ Y METEOROLOGÍA -->
     <div id="view-idle" class="hidden box">
-        <!-- Reloj gigante en el centro, empujado un poco abajo para dejarle espacio al banner del tren si aparece -->
-        <div style="font-size: 150px; font-weight: bold; margin-top: 110px; letter-spacing: -2px;" class="clock-display">00:00</div>
+        <!-- Bajamos el reloj a margin-top: 155px para que pase por abajo del banner negro holgadamente -->
+        <div style="font-size: 150px; font-weight: bold; margin-top: 155px; letter-spacing: -2px;" class="clock-display">00:00</div>
         
-        <!-- Temperatura principal -->
-        <div style="font-size: 70px; margin-top: 10px;">
+        <div style="font-size: 70px; margin-top: 5px;">
             <span id="wx-icon"><i class="fa-solid fa-sun"></i></span>
             <span id="wx-temp" style="margin-left: 15px; font-weight: bold;">--°</span>
         </div>
 
-        <!-- Datos extendidos de clima -->
-        <div class="data-container" style="margin-top: 60px; border-top: 2px solid #000; padding-top: 25px;">
+        <div class="data-container" style="margin-top: 50px; border-top: 2px solid #000; padding-top: 25px;">
             <div class="med" style="width: 30%;">WIND<b id="wx-wind">-- km/h</b></div>
             <span class="med-sep">|</span>
             <div class="med" style="width: 30%;">HUMIDITY<b id="wx-hum">--%</b></div>
@@ -76,11 +73,12 @@
 
     <!-- PANTALLA ALERTA: VUELO DETECTADO (< 5 MINUTOS) -->
     <div id="view-flight" class="hidden box">
-        <div class="title-container" style="margin-top: 30px;">
-            <span id="callsign" class="huge"><i class="fa-solid fa-plane"></i>---</span>
+        <!-- Aerolínea en gigante y el callsign abajo con el avioncito -->
+        <div class="title-container" style="margin-top: 40px;">
+            <span id="airline" style="font-size: 52px; font-weight: bold; display: inline-block; vertical-align: middle; max-width: 80%; line-height: 1.1;">---</span>
             <span id="track-arrow" class="arrow"><i class="fa-solid fa-arrow-up"></i></span>
         </div>
-        <div id="airline" class="big">---</div>
+        <div id="callsign-display" class="big" style="margin-top: 10px; color: #333;"><i class="fa-solid fa-plane"></i> ---</div>
         
         <div class="data-container">
             <div class="med">ALTITUDE<b id="alt">--</b></div>
@@ -105,13 +103,16 @@
     </div>
 
     <script>
-        var MODO_PRUEBA_TREN = true; // CAMBIAR A FALSE PARA QUE SEA AUTOMÁTICO
+        // ==========================================
+        // MODO PRUEBA: Cambialo a false para que 
+        // el tren funcione solo Mar y Jue 06:00 a 08:00
+        // ==========================================
+        var MODO_PRUEBA_TREN = true; 
 
         var USER_LAT = -34.53;
         var USER_LON = -58.49;
         
         var RADAR_API_URL = '/api/vuelos';
-        // Nueva API de clima con datos de viento, humedad y probabilidad de lluvia
         var WEATHER_API_URL = 'https://api.open-meteo.com/v1/forecast?latitude=' + USER_LAT + '&longitude=' + USER_LON + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=precipitation_probability_max&timezone=America%2FArgentina%2FBuenos_Aires';
 
         var statusBar = document.getElementById('status-bar');
@@ -119,8 +120,8 @@
         var viewFlight = document.getElementById('view-flight');
         var debugEl = document.getElementById('debug');
 
-        var callsignEl = document.getElementById('callsign');
         var airlineEl = document.getElementById('airline');
+        var callsignDisplayEl = document.getElementById('callsign-display');
         var altEl = document.getElementById('alt');
         var spdEl = document.getElementById('spd');
         var distEl = document.getElementById('dist');
@@ -177,14 +178,11 @@
                         var pop = data.daily.precipitation_probability_max[0] + '%';
                         var iconHtml = getWeatherIconHtml(curr.weather_code);
                         
-                        // Panel por defecto (Idle)
                         document.getElementById('wx-icon').innerHTML = iconHtml;
                         document.getElementById('wx-temp').innerText = temp;
                         document.getElementById('wx-hum').innerText = hum;
                         document.getElementById('wx-wind').innerText = wind;
                         document.getElementById('wx-pop').innerText = pop;
-
-                        // Tablerito de abajo cuando hay un avión
                         document.getElementById('wx-flight').innerHTML = ' ' + iconHtml + ' ' + temp;
                     } catch (e) {}
                 }
@@ -217,10 +215,11 @@
             return '<i class="fa-solid fa-arrow-up fa-rotate-' + rounded + '"></i>';
         }
 
-        function getAirline(callsign) {
-            if (!callsign) return 'UNIDENTIFIED FLIGHT';
-            var clean = callsign.trim();
-            return airlines[clean.substring(0, 3).toUpperCase()] || 'COMMERCIAL FLIGHT';
+        function getAirline(rawCallsign) {
+            if (!rawCallsign) return 'PRIVATE / UNKNOWN';
+            var clean = rawCallsign.trim();
+            var code = clean.substring(0, 3).toUpperCase();
+            return airlines[code] || 'COMMERCIAL FLIGHT';
         }
 
         function fetchRadar() {
@@ -249,12 +248,11 @@
                                 var stateObj = planeStates[planeId] || { phase: 'UNKNOWN', graceTicks: 0 };
                                 var isApproaching = false;
                                 
-                                // Lógica de alejamiento
                                 if (previousDistances[planeId] !== undefined) {
                                     if (dist > previousDistances[planeId] + 0.05) {
                                         if (stateObj.phase === 'APPROACHING') { 
                                             stateObj.phase = 'LEAVING'; 
-                                            stateObj.graceTicks = 8; // 8 ticks de 15seg = 2 MINUTOS exactos mostrándolo después de pasar
+                                            stateObj.graceTicks = 8; // 2 minutos congelado al irse
                                         }
                                         else if (stateObj.phase === 'LEAVING') { if (stateObj.graceTicks > 0) stateObj.graceTicks--; }
                                         else { stateObj.phase = 'LEAVING'; stateObj.graceTicks = 0; }
@@ -275,13 +273,9 @@
                                     if (headingDiff > 60) isPointingToUs = false;
                                 }
 
-                                // Cálculo de ETA en minutos para saber si amerita prender la pantalla
                                 var spdKmH = plane.gs ? (plane.gs * 1.852) : null;
                                 var etaMin = (spdKmH !== null && spdKmH > 20) ? ((dist / spdKmH) * 60) : 999;
 
-                                // --- LA NUEVA LEY DE LOS 5 MINUTOS ---
-                                // Solo se considera elegible si ETA es menor a 5.5 min y viene hacia nosotros,
-                                // O si acaba de pasarnos por arriba y le quedan ticks de gracia (2 mins max)
                                 var isEligible = false;
                                 if (isApproaching && isPointingToUs && etaMin <= 5.5) {
                                     isEligible = true;
@@ -322,7 +316,13 @@
             viewIdle.className = 'hidden'; 
             viewFlight.className = 'box';
             
-            var callsign = (plane.flight || '---').trim();
+            // Lógica inteligente para nombre de vuelo y aerolínea
+            var rawCallsign = plane.flight ? plane.flight.trim() : '';
+            var hexCode = plane.hex ? plane.hex.trim().toUpperCase() : '';
+            
+            var callsignText = rawCallsign !== '' ? rawCallsign : hexCode;
+            var airlineText = getAirline(rawCallsign);
+            
             var altFt = plane.alt_baro || plane.alt_geom;
             var alt = '---';
             if (altFt === 'ground') alt = 'On ground';
@@ -339,15 +339,16 @@
                 etaText = (etaMin < 1) ? '< 1 min' : Math.round(etaMin) + ' min';
             } else if (spdKmH !== null && spdKmH <= 20) { etaText = 'N/A'; }
             
-            callsignEl.innerHTML = '<i class="fa-solid fa-plane"></i> ' + callsign;
-            airlineEl.innerText = getAirline(callsign); altEl.innerText = alt; spdEl.innerText = spd;
+            airlineEl.innerText = airlineText;
+            callsignDisplayEl.innerHTML = '<i class="fa-solid fa-plane"></i> ' + callsignText;
+            
+            altEl.innerText = alt; spdEl.innerText = spd;
             distEl.innerText = distance.toFixed(1) + ' km'; etaEl.innerText = etaText;
             trackArrowEl.innerHTML = getDirectionArrowHtml(plane.track);
         }
 
         fetchRadar(); setInterval(fetchRadar, 15000);
 
-        // --- MONITOR TREN DE LA COSTA (E-INK FRIENDLY & TOP POSITION) ---
         function checkTrain() {
             var now = new Date();
             var h = now.getUTCHours() - 3;
@@ -357,13 +358,12 @@
             
             var isTargetDay = (day === 2 || day === 4); 
             var timeInMinutes = (h * 60) + m;
-            var isTargetTime = (timeInMinutes >= 360 && timeInMinutes <= 480); // 06:00 a 08:00
+            var isTargetTime = (timeInMinutes >= 360 && timeInMinutes <= 480); 
             
             var banner = document.getElementById('train-banner');
             
             if (MODO_PRUEBA_TREN || (isTargetDay && isTargetTime)) {
-                
-                var schedules = [410, 430, 450]; // 06:50, 07:10, 07:30
+                var schedules = [410, 430, 450]; 
                 var nextTrainMins = -1;
                 for (var i = 0; i < schedules.length; i++) {
                     if (schedules[i] > timeInMinutes) {
@@ -393,14 +393,10 @@
                     if (xhr.status >= 200 && xhr.status < 300) {
                         try {
                             var data = JSON.parse(xhr.responseText);
-                            
-                            // COLORES ELIMINADOS: Todo blanco (#FFF) para máxima legibilidad en tinta electrónica.
-                            // Agregamos un ícono de advertencia si no está a horario.
                             var prefix = "";
                             if (data.status === "DEMORADO" || data.status === "CANCELADO") {
                                 prefix = "⚠️ ";
                             }
-                            
                             document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: #FFF; vertical-align: middle;">| ' + prefix + data.status + '</span>';
                         } catch (e) {}
                     } else {
