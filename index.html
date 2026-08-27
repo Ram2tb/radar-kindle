@@ -149,12 +149,22 @@
             'SKU': 'Sky Airline'
         };
 
-        // --- RELOJ FORZADO A BUENOS AIRES ---
+        // --- RELOJ FORZADO (MÉTODO BRUTO UTC-3) ---
         function updateClock() {
             var d = new Date();
-            // Forzamos la zona horaria de Argentina sin importar la hora del sistema del Kindle
-            var options = { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit', hour12: false };
-            var timeStr = d.toLocaleTimeString('es-AR', options);
+            
+            // Tomamos la hora universal (UTC) y le restamos 3 horas a la fuerza (Argentina)
+            var h = d.getUTCHours() - 3;
+            
+            // Si la resta da negativo (ej: son las 01:00 UTC - 3 = -2), le sumamos 24 para dar la vuelta al día
+            if (h < 0) {
+                h = h + 24;
+            }
+            
+            var m = d.getUTCMinutes();
+            
+            // Armamos el texto obligando a que tenga el cero adelante si es menor a 10, y con los dos puntos
+            var timeStr = (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
             
             var clocks = document.getElementsByClassName('clock-display');
             for(var i = 0; i < clocks.length; i++) {
