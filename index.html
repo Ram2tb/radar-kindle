@@ -296,7 +296,7 @@
 
         fetchRadar(); setInterval(fetchRadar, 15000);
 
-        // --- MONITOR TREN DE LA COSTA EN TIEMPO REAL ---
+       // --- MONITOR TREN DE LA COSTA EN TIEMPO REAL ---
         function checkTrain() {
             var now = new Date();
             var h = now.getUTCHours() - 3;
@@ -306,34 +306,65 @@
             
             var isTargetDay = (day === 2 || day === 4); 
             var timeInMinutes = (h * 60) + m;
-            // Configurado para chequear entre las 06:00 y las 08:00
-            var isTargetTime = (timeInMinutes >= 360 && timeInMinutes <= 480); 
+            var isTargetTime = (timeInMinutes >= 360 && timeInMinutes <= 480); // 06:00 a 08:00
             
             var banner = document.getElementById('train-banner');
             
             if (MODO_PRUEBA_TREN || (isTargetDay && isTargetTime)) {
-                banner.className = ''; 
+                
+                // 1. CALCULAMOS EL PRÓXIMO TREN
+                // Horarios exactos de tu novia: 06:50 (410), 07:10 (430), 07:30 (450)
+                var schedules = [410, 430, 450];
+                var nextTrainMins = -1;
+                
+                for (var i = 0; i < schedules.length; i++) {
+                    if (schedules[i] > timeInMinutes) {
+                        nextTrainMins = schedules[i];
+                        break;
+                    }
+                }
+                
+                // Si ya pasó el último tren de las 07:30 (y no estamos en modo prueba), ocultamos el banner
+                if (nextTrainMins === -1 && !MODO_PRUEBA_TREN) {
+                    banner.className = 'hidden';
+                    return;
+                }
+                
+                // Si estás en MODO_PRUEBA_TREN a cualquier otra hora de la tarde/noche, inventa uno en 15 min para testear
+                if (nextTrainMins === -1 && MODO_PRUEBA_TREN) {
+                    nextTrainMins = timeInMinutes + 15;
+                }
+                
+                banner.className = ''; // Mostramos el banner
+                
+                // Convertimos esos minutos a formato HH:MM
+                var nextH = Math.floor(nextTrainMins / 60) % 24;
+                var nextM = nextTrainMins % 60;
+                var timeStr = (nextH < 10 ? '0' + nextH : nextH) + ':' + (nextM < 10 ? '0' + nextM : nextM);
+
+                // Mostramos el cartel de "Buscando..."
+                document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: #CCC; vertical-align: middle;">| BUSCANDO...</span>';
+
+                // 2. BUSCAMOS EL ESTADO REAL EN VERCEL
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', '/api/tren', true);
                 xhr.onload = function() {
                     if (xhr.status >= 200 && xhr.status < 300) {
                         try {
                             var data = JSON.parse(xhr.responseText);
-                            var color = "#4CAF50"; 
-                            if (data.status === "DEMORADO") color = "#FF9800"; 
-                            if (data.status === "CANCELADO" || data.status === "SIN SEÑAL") color = "#F44336"; 
-                            var statusEl = document.getElementById('train-status-text');
-                            statusEl.innerText = data.status;
-                            statusEl.style.color = color;
+                            var color = "#4CAF50"; // Verde
+                            if (data.status === "DEMORADO") color = "#FF9800"; // Naranja
+                            if (data.status === "CANCELADO" || data.status === "SIN SEÑAL") color = "#F44336"; // Rojo
+                            
+                            // Imprimimos la HORA exacta calculada + EL ESTADO real
+                            document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: ' + color + '; vertical-align: middle;">| ' + data.status + '</span>';
                         } catch (e) {}
                     } else {
-                        // Si da error 404 porque todavía Vercel no actualizó la carpeta api
-                        document.getElementById('train-status-text').innerText = 'API PENDIENTE';
-                        document.getElementById('train-status-text').style.color = '#FF9800';
+                        document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: #FF9800; vertical-align: middle;">| API PENDIENTE</span>';
                     }
                 };
                 xhr.onerror = function() {
-                    document.getElementById('train-status-text').innerText = 'ERROR DE RED';
+                    document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: #F44336; vertical-align: middle;">| ERROR RED</span>';
                 }
                 xhr.send();
             } else {
