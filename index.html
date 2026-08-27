@@ -43,19 +43,27 @@
     <div id="debug"></div>
     <div id="status-bar" class="big" style="margin-top: 250px;">INITIALIZING...</div>
 
-    <!-- BANNER DINÁMICO TREN DE LA COSTA -->
+    <!-- BANNER DINÁMICO TREN DE LA COSTA (Z-Index alto para prioridad) -->
     <div id="train-banner" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 10px 0; border-bottom: 4px solid #333; z-index: 100;">
         <div style="font-size: 20px; font-weight: bold; letter-spacing: 2px; color: #CCC; line-height: 1;">
-            <i class="fa-solid fa-train-tram"></i> PRÓXIMO TREN A DELTA
+            <i class="fa-solid fa-train-tram"></i> PRÓXIMO TREN A TIGRE
         </div>
         <div style="font-size: 55px; font-weight: bold; margin-top: 5px; line-height: 1;" id="train-time">
             ESTADO: <span id="train-status-text" style="font-size: 45px; font-weight: normal; color: #FFF; vertical-align: middle;">BUSCANDO...</span>
         </div>
     </div>
 
+    <!-- BANNER SPOTIFY (Arriba también, pero se oculta si hay tren) -->
+    <div id="spotify-banner" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 15px 0; border-bottom: 4px solid #333; z-index: 90;">
+        <div style="font-size: 40px; font-weight: bold; margin-bottom: 5px; line-height: 1.1; white-space: normal; padding: 0 20px;">
+            <i class="fa-brands fa-spotify" style="margin-right: 15px;"></i>
+            <span id="sp-title">Buscando...</span>
+        </div>
+        <div style="font-size: 26px; color: #CCC; margin-top: 5px; line-height: 1; white-space: normal; padding: 0 20px;" id="sp-artist">---</div>
+    </div>
+
     <!-- PANTALLA PRINCIPAL: RELOJ Y METEOROLOGÍA -->
     <div id="view-idle" class="hidden box">
-        <!-- Reloj empujado un 15% más abajo (margin-top 170px) -->
         <div style="font-size: 130px; font-weight: bold; margin-top: 170px; letter-spacing: -2px; line-height: 1;" class="clock-display">00:00</div>
         
         <div style="font-size: 60px; margin-top: 25px; line-height: 1;">
@@ -101,18 +109,16 @@
             </div>
         </div>
     </div>
-    
-<!-- BANNER SPOTIFY (Abajo de todo) -->
-    <div id="spotify-banner" class="hidden" style="position: absolute; bottom: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 15px 0; border-top: 4px solid #333; z-index: 100;">
-        <div style="font-size: 40px; font-weight: bold; margin-bottom: 5px; line-height: 1.1; white-space: normal; padding: 0 20px;">
-            <i class="fa-brands fa-spotify" style="margin-right: 15px;"></i>
-            <span id="sp-title">Buscando...</span>
-        </div>
-        <div style="font-size: 26px; color: #CCC; margin-top: 5px; line-height: 1; white-space: normal; padding: 0 20px;" id="sp-artist">---</div>
-    </div>
-    
+
     <script>
-        var MODO_PRUEBA_TREN = true; // CAMBIAR A FALSE PARA QUE SEA AUTOMÁTICO
+        // ==========================================
+        // MODO PRUEBA TREN
+        // Cambialo a false para probar que Spotify
+        // aparezca en su lugar sin que el tren lo pise
+        // ==========================================
+        var MODO_PRUEBA_TREN = true; 
+
+        var TREN_ACTIVO = false; // Variable global para prioridades
 
         var USER_LAT = -34.53;
         var USER_LON = -58.49;
@@ -377,7 +383,9 @@
                 }
                 
                 if (nextTrainMins === -1 && !MODO_PRUEBA_TREN) {
-                    banner.className = 'hidden'; return;
+                    banner.className = 'hidden'; 
+                    TREN_ACTIVO = false;
+                    return;
                 }
                 
                 if (nextTrainMins === -1 && MODO_PRUEBA_TREN) {
@@ -385,6 +393,7 @@
                 }
                 
                 banner.className = ''; 
+                TREN_ACTIVO = true;
                 
                 var nextH = Math.floor(nextTrainMins / 60) % 24;
                 var nextM = nextTrainMins % 60;
@@ -414,12 +423,12 @@
                 xhr.send();
             } else {
                 banner.className = 'hidden'; 
+                TREN_ACTIVO = false;
             }
         }
         setInterval(checkTrain, 120000); 
         checkTrain();
 
-        // --- SPOTIFY EN TIEMPO REAL ---
         function checkSpotify() {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', '/api/spotify', true);
@@ -429,13 +438,12 @@
                         var data = JSON.parse(xhr.responseText);
                         var banner = document.getElementById('spotify-banner');
                         
-                        // Si está escuchando música en este instante, mostramos el cartel abajo
-                        if (data.isPlaying) {
+                        // Si está escuchando música Y el tren no está usando el espacio
+                        if (data.isPlaying && !TREN_ACTIVO) {
                             document.getElementById('sp-title').innerText = data.title;
                             document.getElementById('sp-artist').innerText = data.artist;
                             banner.className = '';
                         } else {
-                            // Si pausa la música, ocultamos el cartel
                             banner.className = 'hidden';
                         }
                     } catch (e) {}
@@ -443,8 +451,7 @@
             };
             xhr.send();
         }
-        
-        setInterval(checkSpotify, 10000); // Revisa qué suena cada 10 segundos
+        setInterval(checkSpotify, 10000); 
         checkSpotify();
 
     </script>
