@@ -23,7 +23,7 @@
         
         .title-container { white-space: normal; width: 100%; padding: 0 20px; box-sizing: border-box; }
         .arrow { font-size: 60px; display: inline-block; vertical-align: middle; margin-left: 15px; }
-        .big { font-size: 38px; margin: 5px 0 15px 0; font-weight: bold; }
+        .big { font-size: 38px; margin: 5px 0 5px 0; font-weight: bold; }
         
         .data-container { margin-top: 20px; width: 94%; margin-left: 3%; white-space: nowrap; }
         .med { display: inline-block; width: 31%; font-size: 18px; vertical-align: top; color: #333; font-weight: bold; line-height: 1; }
@@ -70,7 +70,6 @@
             <span id="wx-temp" style="margin-left: 15px; font-weight: bold;">--°</span>
         </div>
 
-        <!-- Íconos de FontAwesome reemplazando a los emojis -->
         <div class="data-container" style="margin-top: 45px; border-top: 2px solid #000; padding-top: 20px;">
             <div class="med" style="width: 30%;">WIND <i class="fa-solid fa-wind"></i><b id="wx-wind">-- km/h</b></div>
             <span class="med-sep">|</span>
@@ -82,11 +81,13 @@
 
     <!-- PANTALLA ALERTA: VUELO DETECTADO (< 5 MINUTOS) -->
     <div id="view-flight" class="hidden box">
-        <div class="title-container" style="margin-top: 145px; line-height: 1;">
+        <div class="title-container" style="margin-top: 140px; line-height: 1;">
             <span id="airline" style="font-size: 52px; font-weight: bold; display: inline-block; vertical-align: middle; max-width: 80%; line-height: 1.1;">---</span>
             <span id="track-arrow" class="arrow"><i class="fa-solid fa-arrow-up"></i></span>
         </div>
-        <div id="callsign-display" class="big" style="color: #333; line-height: 1;"><i class="fa-solid fa-plane"></i> ---</div>
+        <div id="callsign-display" class="big" style="color: #333; line-height: 1;">---</div>
+        <!-- ACÁ APARECE LA RUTA (AEP -> COR) -->
+        <div id="route-display" style="font-size: 28px; color: #555; margin-bottom: 15px; font-weight: bold; min-height: 30px;"></div>
         
         <div class="data-container">
             <div class="med">ALTITUDE<b id="alt">--</b></div>
@@ -111,7 +112,6 @@
     </div>
 
     <script>
-        // MODO PRUEBA TREN APAGADO
         var MODO_PRUEBA_TREN = false; 
         var TREN_ACTIVO = false; 
 
@@ -128,6 +128,7 @@
 
         var airlineEl = document.getElementById('airline');
         var callsignDisplayEl = document.getElementById('callsign-display');
+        var routeDisplayEl = document.getElementById('route-display');
         var altEl = document.getElementById('alt');
         var spdEl = document.getElementById('spd');
         var distEl = document.getElementById('dist');
@@ -136,9 +137,10 @@
 
         var previousDistances = {};
         var planeStates = {}; 
+        var lastFetchedCallsign = ""; // Para no spamear FR24
 
-        // Diccionario de Aerolíneas Actualizado con el código SKX
-       var airlines = { 'ARG': 'Aerolíneas Argentinas', 'FBZ': 'Flybondi', 'AVA': 'Avianca', 'JSM': 'JetSMART', 'LAN': 'LATAM Airlines', 'GLO': 'GOL Linhas Aéreas', 'AAL': 'American Airlines', 'DAL': 'Delta Air Lines', 'UAL': 'United Airlines', 'IBE': 'Iberia', 'LPE': 'LATAM Perú', 'DSM': 'LADE', 'CMP': 'Copa Airlines', 'AZU': 'Azul Linhas Aéreas', 'BOV': 'Boliviana de Aviación', 'SKU': 'Sky Airline', 'LRC': 'Avianca', 'JES': 'JetSMART', 'TAM': 'LATAM Brasil', 'LVH': 'Flybondi', 'LVJ': 'JetSMART', 'GLG': 'Avianca Ecuador', 'E06': 'Aeronave Privada', 'ITY': 'ITA Airways', 'N45': 'Aeronave Privada', 'SKX': 'Sarpa / Skyway' };
+       var airlines = { 'ARG': 'Aerolíneas Argentinas', 'FBZ': 'Flybondi', 'AVA': 'Avianca', 'JSM': 'JetSMART', 'LAN': 'LATAM Airlines', 'GLO': 'GOL Linhas Aéreas', 'AAL': 'American Airlines', 'DAL': 'Delta Air Lines', 'UAL': 'United Airlines', 'IBE': 'Iberia', 'LPE': 'LATAM Perú', 'DSM': 'LADE', 'CMP': 'Copa Airlines', 'AZU': 'Azul Linhas Aéreas', 'BOV': 'Boliviana de Aviación', 'SKU': 'Sky Airline', 'LRC': 'Avianca', 'JES': 'JetSMART', 'TAM': 'LATAM Brasil', 'LVH': 'Flybondi', 'LVJ': 'JetSMART', 'GLG': 'Avianca Ecuador', 'E06': 'Aeronave Privada', 'ITY': 'ITA Airways', 'N45': 'Aeronave Privada', 'SKX': 'Sarpa / Skyway', 'FAG': 'Fuerza Aérea Argentina', 'LVC': 'Aeronave Privada' };
+        };
 
         var colonVisible = true;
         function updateClock() {
@@ -319,6 +321,7 @@
         function showIdle() {
             viewFlight.className = 'hidden'; 
             viewIdle.className = 'box'; 
+            lastFetchedCallsign = ""; // Reseteamos la ruta si no hay avión
         }
 
         function showFlight(plane, distance) {
@@ -331,6 +334,27 @@
             var callsignText = rawCallsign !== '' ? rawCallsign : hexCode;
             var airlineText = getAirline(rawCallsign);
             
+            // LÓGICA DE RUTA: Solo buscamos si hay patente y si es distinta a la que ya estamos mostrando
+            if (rawCallsign !== '' && rawCallsign !== lastFetchedCallsign) {
+                lastFetchedCallsign = rawCallsign;
+                routeDisplayEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size: 20px;"></i>'; // Spinner de carga
+                
+                var xhrRoute = new XMLHttpRequest();
+                xhrRoute.open('GET', '/api/ruta?callsign=' + encodeURIComponent(rawCallsign), true);
+                xhrRoute.onload = function() {
+                    if (xhrRoute.status === 200) {
+                        try {
+                            var rData = JSON.parse(xhrRoute.responseText);
+                            routeDisplayEl.innerHTML = rData.route; // Imprime ej: AEP ✈️ COR
+                        } catch(e) { routeDisplayEl.innerHTML = ''; }
+                    }
+                };
+                xhrRoute.send();
+            } else if (rawCallsign === '') {
+                routeDisplayEl.innerHTML = ''; // Si es privado, lo dejamos en blanco
+                lastFetchedCallsign = '';
+            }
+
             var altFt = plane.alt_baro || plane.alt_geom;
             var alt = '---';
             if (altFt === 'ground') alt = 'On ground';
@@ -348,7 +372,7 @@
             } else if (spdKmH !== null && spdKmH <= 20) { etaText = 'N/A'; }
             
             airlineEl.innerText = airlineText;
-            callsignDisplayEl.innerHTML = '<i class="fa-solid fa-plane"></i> ' + callsignText;
+            callsignDisplayEl.innerHTML = '<i class="fa-solid fa-ticket"></i> ' + callsignText;
             
             altEl.innerText = alt; spdEl.innerText = spd;
             distEl.innerText = distance.toFixed(1) + ' km'; etaEl.innerText = etaText;
