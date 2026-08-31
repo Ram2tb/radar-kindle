@@ -110,7 +110,8 @@
     </div>
 
     <script>
-        var MODO_PRUEBA_TREN = true; 
+        // MODO PRUEBA TREN APAGADO
+        var MODO_PRUEBA_TREN = false; 
         var TREN_ACTIVO = false; 
 
         var USER_LAT = -34.53;
@@ -135,7 +136,7 @@
         var previousDistances = {};
         var planeStates = {}; 
 
-        // Diccionario expandido
+        // Diccionario de Aerolíneas Actualizado con los códigos nuevos
         var airlines = {
             'ARG': 'Aerolíneas Argentinas', 'FBZ': 'Flybondi', 'AVA': 'Avianca',
             'JSM': 'JetSMART', 'LAN': 'LATAM Airlines', 'GLO': 'GOL Linhas Aéreas',
@@ -143,7 +144,8 @@
             'IBE': 'Iberia', 'LPE': 'LATAM Perú', 'DSM': 'LADE', 'CMP': 'Copa Airlines',
             'AZU': 'Azul Linhas Aéreas', 'BOV': 'Boliviana de Aviación', 'SKU': 'Sky Airline',
             'LRC': 'Avianca', 'JES': 'JetSMART', 'TAM': 'LATAM Brasil', 'LVH': 'Flybondi', 
-            'LVJ': 'JetSMART', 'GLG': 'Avianca Ecuador', 'E06': 'Aeronave Privada'
+            'LVJ': 'JetSMART', 'GLG': 'Avianca Ecuador', 'E06': 'Aeronave Privada',
+            'ITY': 'ITA Airways', 'N45': 'Aeronave Privada'
         };
 
         var colonVisible = true;
@@ -377,7 +379,7 @@
             var banner = document.getElementById('train-banner');
             
             if (MODO_PRUEBA_TREN || (isTargetDay && isTargetTime)) {
-                var schedules = [410, 430, 450]; 
+                var schedules = [430, 450, 470]; 
                 var nextTrainMins = -1;
                 for (var i = 0; i < schedules.length; i++) {
                     if (schedules[i] > timeInMinutes) {
