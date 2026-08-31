@@ -381,8 +381,7 @@
             } else if (spdKmH !== null && spdKmH <= 20) { etaText = 'N/A'; }
             
             airlineEl.innerText = airlineText;
-            callsignDisplayEl.innerHTML = '<i class="fa-solid fa-ticket"></i> ' + callsignText;
-            
+            callsignDisplayEl.innerHTML = '<i class="fa-solid fa-plane"></i> ' + callsignText;            
             altEl.innerText = alt; spdEl.innerText = spd;
             distEl.innerText = distance.toFixed(1) + ' km'; etaEl.innerText = etaText;
             trackArrowEl.innerHTML = getDirectionArrowHtml(plane.track);
