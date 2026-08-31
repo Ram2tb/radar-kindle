@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html>
 <head>
     <meta charset="utf-8">
@@ -71,12 +70,13 @@
             <span id="wx-temp" style="margin-left: 15px; font-weight: bold;">--°</span>
         </div>
 
+        <!-- Íconos de FontAwesome reemplazando a los emojis -->
         <div class="data-container" style="margin-top: 45px; border-top: 2px solid #000; padding-top: 20px;">
-            <div class="med" style="width: 30%;">WIND 🧭<b id="wx-wind">-- km/h</b></div>
+            <div class="med" style="width: 30%;">WIND <i class="fa-solid fa-wind"></i><b id="wx-wind">-- km/h</b></div>
             <span class="med-sep">|</span>
-            <div class="med" style="width: 30%;">HUMIDITY 💧<b id="wx-hum">--%</b></div>
+            <div class="med" style="width: 30%;">HUMIDITY <i class="fa-solid fa-droplet"></i><b id="wx-hum">--%</b></div>
             <span class="med-sep">|</span>
-            <div class="med" style="width: 30%;">RAIN ☔<b id="wx-pop">--%</b></div>
+            <div class="med" style="width: 30%;">RAIN <i class="fa-solid fa-umbrella"></i><b id="wx-pop">--%</b></div>
         </div>
     </div>
 
@@ -137,7 +137,7 @@
         var previousDistances = {};
         var planeStates = {}; 
 
-        // Diccionario de Aerolíneas Actualizado con los códigos nuevos
+        // Diccionario de Aerolíneas Actualizado con el código SKX
         var airlines = {
             'ARG': 'Aerolíneas Argentinas', 'FBZ': 'Flybondi', 'AVA': 'Avianca',
             'JSM': 'JetSMART', 'LAN': 'LATAM Airlines', 'GLO': 'GOL Linhas Aéreas',
@@ -146,7 +146,7 @@
             'AZU': 'Azul Linhas Aéreas', 'BOV': 'Boliviana de Aviación', 'SKU': 'Sky Airline',
             'LRC': 'Avianca', 'JES': 'JetSMART', 'TAM': 'LATAM Brasil', 'LVH': 'Flybondi', 
             'LVJ': 'JetSMART', 'GLG': 'Avianca Ecuador', 'E06': 'Aeronave Privada',
-            'ITY': 'ITA Airways', 'N45': 'Aeronave Privada'
+            'ITY': 'ITA Airways', 'N45': 'Aeronave Privada', 'SKX': 'Sarpa / Skyway'
         };
 
         var colonVisible = true;
