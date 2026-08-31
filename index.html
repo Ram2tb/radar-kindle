@@ -21,7 +21,6 @@
         .hidden { display: none !important; }
         .box { box-sizing: border-box; width: 100%; }
         
-        /* Clases Vuelos */
         .title-container { white-space: normal; width: 100%; padding: 0 20px; box-sizing: border-box; }
         .arrow { font-size: 60px; display: inline-block; vertical-align: middle; margin-left: 15px; }
         .big { font-size: 38px; margin: 5px 0 15px 0; font-weight: bold; }
@@ -64,7 +63,6 @@
 
     <!-- PANTALLA PRINCIPAL: RELOJ Y METEOROLOGÍA -->
     <div id="view-idle" class="hidden box">
-        <!-- Reloj gigante con separador dinámico -->
         <div style="font-size: 130px; font-weight: bold; margin-top: 170px; letter-spacing: -2px; line-height: 1;" class="clock-display">00<span class="clock-sep" style="opacity: 1;">:</span>00</div>
         
         <div style="font-size: 60px; margin-top: 25px; line-height: 1;">
@@ -112,7 +110,7 @@
     </div>
 
     <script>
-        var MODO_PRUEBA_TREN = false; 
+        var MODO_PRUEBA_TREN = true; 
         var TREN_ACTIVO = false; 
 
         var USER_LAT = -34.53;
@@ -137,16 +135,17 @@
         var previousDistances = {};
         var planeStates = {}; 
 
+        // Diccionario expandido
         var airlines = {
             'ARG': 'Aerolíneas Argentinas', 'FBZ': 'Flybondi', 'AVA': 'Avianca',
             'JSM': 'JetSMART', 'LAN': 'LATAM Airlines', 'GLO': 'GOL Linhas Aéreas',
             'AAL': 'American Airlines', 'DAL': 'Delta Air Lines', 'UAL': 'United Airlines',
             'IBE': 'Iberia', 'LPE': 'LATAM Perú', 'DSM': 'LADE', 'CMP': 'Copa Airlines',
             'AZU': 'Azul Linhas Aéreas', 'BOV': 'Boliviana de Aviación', 'SKU': 'Sky Airline',
-            'LRC': 'Avianca'
+            'LRC': 'Avianca', 'JES': 'JetSMART', 'TAM': 'LATAM Brasil', 'LVH': 'Flybondi', 
+            'LVJ': 'JetSMART', 'GLG': 'Avianca Ecuador', 'E06': 'Aeronave Privada'
         };
 
-        // --- RELOJ CON DOS PUNTOS PARPADEANTES ---
         var colonVisible = true;
         function updateClock() {
             var d = new Date();
@@ -157,7 +156,6 @@
             var hoursStr = (h < 10 ? '0' + h : h);
             var minsStr = (m < 10 ? '0' + m : m);
             
-            // Alternamos la visibilidad de los dos puntos
             colonVisible = !colonVisible;
             var sepHtml = '<span class="clock-sep" style="opacity: ' + (colonVisible ? '1' : '0') + ';">:</span>';
             var timeHtml = hoursStr + sepHtml + minsStr;
@@ -167,7 +165,7 @@
                 clocks[i].innerHTML = timeHtml;
             }
         }
-        setInterval(updateClock, 1000); // Se actualiza cada 1 segundo para lograr el parpadeo fluido
+        setInterval(updateClock, 1000); 
         updateClock();
 
         function getWeatherIconHtml(code) {
@@ -233,10 +231,10 @@
         }
 
         function getAirline(rawCallsign) {
-            if (!rawCallsign) return 'PRIVATE / UNKNOWN';
+            if (!rawCallsign) return 'PRIVATE / NO INFO';
             var clean = rawCallsign.trim();
             var code = clean.substring(0, 3).toUpperCase();
-            return airlines[code] || 'COMMERCIAL FLIGHT';
+            return airlines[code] || 'PRIVATE / NO INFO';
         }
 
         function fetchRadar() {
