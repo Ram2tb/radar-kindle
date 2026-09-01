@@ -17,14 +17,13 @@
             -webkit-transform: rotate(90deg); -webkit-transform-origin: 0 0;
             text-align: center; overflow: hidden;
         }
-        #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; z-index: 10; }
+        #debug { position: absolute; top: 0; left: 0; font-size: 14px; color: #000; padding: 5px; z-index: 10; display: none; }
         .hidden { display: none !important; }
         .box { box-sizing: border-box; width: 100%; }
         
         .title-container { white-space: normal; width: 100%; padding: 0 20px; box-sizing: border-box; }
         .arrow { font-size: 60px; display: inline-block; vertical-align: middle; margin-left: 15px; }
         
-        /* Acomodado para que queden alineados y con la misma jerarquía */
         .big { font-size: 38px; margin: 5px 0; font-weight: bold; display: inline-block; vertical-align: middle; }
         
         .data-container { margin-top: 20px; width: 94%; margin-left: 3%; white-space: nowrap; }
@@ -42,38 +41,41 @@
 </head>
 <body>
     <div id="debug"></div>
-    <div id="status-bar" class="big" style="margin-top: 250px; display: block;">INITIALIZING...</div>
+
+    <!-- BOTÓN TOGGLE SPOTIFY FIJO (Arriba a la Izquierda) -->
+    <div id="spotify-toggle" onclick="toggleSpotify()" style="position: absolute; top: 12px; left: 15px; z-index: 1000; font-size: 32px; color: #888; cursor: pointer;">
+        <i class="fa-brands fa-spotify"></i>
+    </div>
 
     <!-- BANNER DINÁMICO TREN DE LA COSTA -->
-    <div id="train-banner" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 10px 0; border-bottom: 4px solid #333; z-index: 100;">
-        <div style="font-size: 20px; font-weight: bold; letter-spacing: 2px; color: #CCC; line-height: 1;">
+    <div id="train-banner" class="hidden" style="width: 100%; background: #000; color: #FFF; padding: 10px 0; border-bottom: 4px solid #333; z-index: 100;">
+        <div style="font-size: 20px; font-weight: bold; letter-spacing: 2px; color: #CCC; line-height: 1; padding-left: 60px;">
             <i class="fa-solid fa-train-tram"></i> PRÓXIMO TREN A TIGRE
         </div>
-        <div style="font-size: 55px; font-weight: bold; margin-top: 5px; line-height: 1;" id="train-time">
+        <div style="font-size: 55px; font-weight: bold; margin-top: 5px; line-height: 1; padding-left: 60px;" id="train-time">
             ESTADO: <span id="train-status-text" style="font-size: 45px; font-weight: normal; color: #FFF; vertical-align: middle;">BUSCANDO...</span>
         </div>
     </div>
 
-   <!-- BANNER SPOTIFY CON CONTROL REMOTO -->
-    <div id="spotify-banner" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 15px 0 25px 0; border-bottom: 4px solid #333; z-index: 90;">
-        <div style="font-size: 40px; font-weight: bold; margin-bottom: 5px; line-height: 1.1; white-space: normal; padding: 0 20px;">
-            <i class="fa-brands fa-spotify" style="margin-right: 15px;"></i>
+    <!-- BANNER SPOTIFY (Ahora empuja hacia abajo y tiene botones proporcionados) -->
+    <div id="spotify-banner" class="hidden" style="width: 100%; background: #000; color: #FFF; padding: 12px 0 15px 0; border-bottom: 4px solid #333; z-index: 90;">
+        <div style="font-size: 28px; font-weight: bold; margin-bottom: 2px; line-height: 1.1; white-space: normal; padding: 0 20px 0 60px;">
             <span id="sp-title">Buscando...</span>
         </div>
-        <div style="font-size: 26px; color: #CCC; margin-top: 5px; line-height: 1; white-space: normal; padding: 0 20px;" id="sp-artist">---</div>
+        <div style="font-size: 20px; color: #CCC; line-height: 1; white-space: normal; padding: 0 20px 0 60px;" id="sp-artist">---</div>
         
-        <!-- Botones de Control Remoto -->
-        <div style="margin-top: 30px; width: 100%; text-align: center;">
-            <span onclick="sendSpCmd('previous')" style="display: inline-block; width: 22%; font-size: 55px; cursor: pointer; color: #FFF;"><i class="fa-solid fa-backward-step"></i></span>
-            <span onclick="sendSpCmd('play')" style="display: inline-block; width: 22%; font-size: 55px; cursor: pointer; color: #FFF;"><i class="fa-solid fa-play"></i></span>
-            <span onclick="sendSpCmd('pause')" style="display: inline-block; width: 22%; font-size: 55px; cursor: pointer; color: #FFF;"><i class="fa-solid fa-pause"></i></span>
-            <span onclick="sendSpCmd('next')" style="display: inline-block; width: 22%; font-size: 55px; cursor: pointer; color: #FFF;"><i class="fa-solid fa-forward-step"></i></span>
+        <div style="margin-top: 15px; width: 100%; text-align: center;">
+            <span onclick="sendSpCmd('previous')" style="display: inline-block; width: 22%; font-size: 35px; cursor: pointer; color: #FFF;"><i class="fa-solid fa-backward-step"></i></span>
+            <span onclick="sendSpCmd('play')" style="display: inline-block; width: 22%; font-size: 35px; cursor: pointer; color: #FFF;"><i class="fa-solid fa-play"></i></span>
+            <span onclick="sendSpCmd('pause')" style="display: inline-block; width: 22%; font-size: 35px; cursor: pointer; color: #FFF;"><i class="fa-solid fa-pause"></i></span>
+            <span onclick="sendSpCmd('next')" style="display: inline-block; width: 22%; font-size: 35px; cursor: pointer; color: #FFF;"><i class="fa-solid fa-forward-step"></i></span>
         </div>
     </div>
 
     <!-- PANTALLA PRINCIPAL: RELOJ Y METEOROLOGÍA -->
     <div id="view-idle" class="hidden box">
-        <div style="font-size: 130px; font-weight: bold; margin-top: 170px; letter-spacing: -2px; line-height: 1;" class="clock-display">00<span class="clock-sep" style="opacity: 1;">:</span>00</div>
+        <div id="idle-spacer" style="height: 170px;"></div>
+        <div style="font-size: 130px; font-weight: bold; letter-spacing: -2px; line-height: 1;" class="clock-display">00<span class="clock-sep" style="opacity: 1;">:</span>00</div>
         
         <div style="font-size: 60px; margin-top: 25px; line-height: 1;">
             <span id="wx-icon"><i class="fa-solid fa-sun"></i></span>
@@ -91,7 +93,8 @@
 
     <!-- PANTALLA ALERTA: VUELO DETECTADO -->
     <div id="view-flight" class="hidden box">
-        <div class="title-container" style="margin-top: 140px; line-height: 1;">
+        <div id="flight-spacer" style="height: 140px;"></div>
+        <div class="title-container" style="line-height: 1;">
             <span id="airline" style="font-size: 52px; font-weight: bold; display: inline-block; vertical-align: middle; max-width: 80%; line-height: 1.1;">---</span>
             <span id="track-arrow" class="arrow"><i class="fa-solid fa-arrow-up"></i></span>
         </div>
@@ -126,6 +129,11 @@
     <script>
         var MODO_PRUEBA_TREN = false; 
         var TREN_ACTIVO = false; 
+        
+        // Variables de estado Spotify
+        var spotifyPauseTimer = null;
+        var spotifyForceShow = false;
+        var lastSpotifyData = { title: 'Modo Remoto Listo', artist: 'Esperando reproducción...', isPlaying: false };
 
         var USER_LAT = -34.53;
         var USER_LON = -58.49;
@@ -133,10 +141,8 @@
         var RADAR_API_URL = '/api/vuelos';
         var WEATHER_API_URL = 'https://api.open-meteo.com/v1/forecast?latitude=' + USER_LAT + '&longitude=' + USER_LON + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=precipitation_probability_max&timezone=America%2FArgentina%2FBuenos_Aires';
 
-        var statusBar = document.getElementById('status-bar');
         var viewIdle = document.getElementById('view-idle');
         var viewFlight = document.getElementById('view-flight');
-        var debugEl = document.getElementById('debug');
 
         var airlineEl = document.getElementById('airline');
         var callsignDisplayEl = document.getElementById('callsign-display');
@@ -151,9 +157,7 @@
         var planeStates = {}; 
         var lastFetchedCallsign = ""; 
 
-        // LISTA VIP (Solo las comerciales que operan en la zona y cruzan seguido)
         var airlines = {
-            // Locales y Regionales
             'ARG': 'Aerolíneas Argentinas', 'FBZ': 'Flybondi', 'JSM': 'JetSMART', 
             'JES': 'JetSMART', 'JAT': 'JetSMART', 'LAN': 'LATAM Airlines', 
             'LPE': 'LATAM Perú', 'TAM': 'LATAM Brasil', 'LAP': 'LATAM Paraguay', 
@@ -161,16 +165,30 @@
             'SKU': 'Sky Airline', 'SKX': 'Sarpa / Skyway', 'BOV': 'Boliviana de Aviación', 
             'CMP': 'Copa Airlines', 'AVA': 'Avianca', 'LRC': 'Avianca', 'GLG': 'Avianca Ecuador', 
             'DSM': 'LADE', 'DAP': 'Aerovías DAP',
-            // Internacionales (Ezeiza)
             'AAL': 'American Airlines', 'DAL': 'Delta Air Lines', 'UAL': 'United Airlines', 
             'IBE': 'Iberia', 'AEA': 'Air Europa', 'AFR': 'Air France', 'DLH': 'Lufthansa', 
             'KLM': 'KLM Royal Dutch', 'BWA': 'British Airways', 'ITY': 'ITA Airways', 
             'THY': 'Turkish Airlines', 'ETH': 'Ethiopian Airlines', 'UAE': 'Emirates', 
             'QTR': 'Qatar Airways', 'AMX': 'Aeroméxico', 'ACA': 'Air Canada',
-            // Casos manuales ya mapeados anteriormente
             'FAG': 'Fuerza Aérea Arg.', 'PNA': 'Prefectura Naval', 'PFA': 'Policía Federal', 
-            'GNA': 'Gendarmería', 'E06': 'Aeronave Privada', 'N45': 'Privado (EEUU)'
+            'GNA': 'Gendarmería'
         };
+
+        // Función que empuja el contenido hacia abajo según los banners activos
+        function updateLayout() {
+            var trainActive = !document.getElementById('train-banner').classList.contains('hidden');
+            var spotActive = !document.getElementById('spotify-banner').classList.contains('hidden');
+            
+            var offset = 0;
+            if (trainActive) offset += 95; 
+            if (spotActive) offset += 115; 
+
+            var idleTop = 170 - offset;
+            var flightTop = 140 - offset;
+            
+            document.getElementById('idle-spacer').style.height = Math.max(10, idleTop) + 'px';
+            document.getElementById('flight-spacer').style.height = Math.max(10, flightTop) + 'px';
+        }
 
         var colonVisible = true;
         function updateClock() {
@@ -191,8 +209,7 @@
                 clocks[i].innerHTML = timeHtml;
             }
         }
-        setInterval(updateClock, 1000); 
-        updateClock();
+        setInterval(updateClock, 1000); updateClock();
 
         function getWeatherIconHtml(code) {
             if (code === 0) return '<i class="fa-solid fa-sun"></i>';
@@ -230,8 +247,7 @@
             };
             xhr.send();
         }
-        fetchWeather();
-        setInterval(fetchWeather, 1800000);
+        fetchWeather(); setInterval(fetchWeather, 1800000);
 
         function getHaversineDistance(lat1, lon1, lat2, lon2) {
             var R = 6371;
@@ -256,21 +272,14 @@
             return '<i class="fa-solid fa-arrow-up fa-rotate-' + rounded + '"></i>';
         }
 
-        // MOTOR INTELIGENTE DE AEROLÍNEAS
         function getAirline(rawCallsign) {
             if (!rawCallsign) return 'PRIVATE';
             var clean = rawCallsign.trim().toUpperCase();
             var code = clean.substring(0, 3);
             
-            // 1. Está en nuestra Lista VIP
             if (airlines[code]) return airlines[code];
+            if (/^[A-Z]{3}\d/.test(clean)) return 'Vuelo Comercial (' + code + ')';
             
-            // 2. Es un vuelo comercial que no tenemos en la lista (Patrón: 3 letras + al menos 1 número)
-            if (/^[A-Z]{3}\d/.test(clean)) {
-                return 'Vuelo Comercial (' + code + ')';
-            }
-            
-            // 3. Diccionario Mundial de Matrículas Privadas (Prefijos ITU)
             if (clean.startsWith('LV')) return 'Privado (ARG)';
             if (clean.startsWith('LQ')) return 'Estatal (ARG)';
             if (clean.startsWith('PR') || clean.startsWith('PP') || clean.startsWith('PT') || clean.startsWith('PS')) return 'Privado (BRA)';
@@ -287,7 +296,6 @@
             if (clean.startsWith('EI')) return 'Privado (IRL)';
             if (clean.startsWith('VH')) return 'Privado (AUS)';
             
-            // Matrículas que empiezan con una sola letra
             if (clean.startsWith('N') && !isNaN(clean.charAt(1))) return 'Privado (EEUU)'; 
             if (clean.startsWith('C') && isNaN(clean.charAt(1))) return 'Privado (CAN)'; 
             if (clean.startsWith('D') && isNaN(clean.charAt(1))) return 'Privado (ALE)'; 
@@ -295,7 +303,6 @@
             if (clean.startsWith('F') && isNaN(clean.charAt(1))) return 'Privado (FRA)'; 
             if (clean.startsWith('I') && isNaN(clean.charAt(1))) return 'Privado (ITA)'; 
             
-            // 4. Si es indescifrable
             return 'PRIVATE'; 
         }
 
@@ -306,8 +313,6 @@
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         var data = JSON.parse(xhr.responseText);
-                        statusBar.className = 'hidden'; 
-                        debugEl.innerHTML = ''; 
                         
                         if (!data || !data.ac || data.ac.length === 0) {
                             showIdle(); return;
@@ -327,21 +332,15 @@
                                 
                                 if (previousDistances[planeId] !== undefined) {
                                     if (dist > previousDistances[planeId] + 0.05) {
-                                        if (stateObj.phase === 'APPROACHING') { 
-                                            stateObj.phase = 'LEAVING'; 
-                                            stateObj.graceTicks = 8; 
-                                        }
+                                        if (stateObj.phase === 'APPROACHING') { stateObj.phase = 'LEAVING'; stateObj.graceTicks = 8; }
                                         else if (stateObj.phase === 'LEAVING') { if (stateObj.graceTicks > 0) stateObj.graceTicks--; }
                                         else { stateObj.phase = 'LEAVING'; stateObj.graceTicks = 0; }
                                     } else if (dist < previousDistances[planeId] - 0.05) {
                                         stateObj.phase = 'APPROACHING'; isApproaching = true;
                                     }
-                                } else { 
-                                    isApproaching = true; 
-                                }
+                                } else { isApproaching = true; }
                                 
                                 currentStates[planeId] = stateObj;
-
                                 var isPointingToUs = true;
                                 if (plane.track !== null && plane.track !== undefined) {
                                     var bearingToUs = getBearing(plane.lat, plane.lon, USER_LAT, USER_LON);
@@ -354,74 +353,52 @@
                                 var etaMin = (spdKmH !== null && spdKmH > 20) ? ((dist / spdKmH) * 60) : 999;
 
                                 var isEligible = false;
-                                if (isApproaching && isPointingToUs && etaMin <= 5.5) {
-                                    isEligible = true;
-                                } else if (stateObj.phase === 'LEAVING' && stateObj.graceTicks > 0) {
-                                    isEligible = true;
-                                }
+                                if (isApproaching && isPointingToUs && etaMin <= 5.5) { isEligible = true; } 
+                                else if (stateObj.phase === 'LEAVING' && stateObj.graceTicks > 0) { isEligible = true; }
 
-                                if (isEligible && dist < minDistance) {
-                                    minDistance = dist; closestFlight = plane;
-                                }
+                                if (isEligible && dist < minDistance) { minDistance = dist; closestFlight = plane; }
                             }
                         }
                         
                         previousDistances = currentDistances; planeStates = currentStates; 
                         
-                        if (closestFlight) {
-                            showFlight(closestFlight, minDistance);
-                        } else {
-                            showIdle();
-                        }
-                    } catch (e) {
-                        debugEl.innerHTML = 'Data error';
-                    }
-                } else {
-                    debugEl.innerHTML = 'Reconnecting...';
-                }
+                        if (closestFlight) { showFlight(closestFlight, minDistance); } 
+                        else { showIdle(); }
+                    } catch (e) {}
+                } 
             };
-            xhr.onerror = function() { debugEl.innerHTML = 'Reconnecting...'; };
             xhr.send();
         }
 
         function showIdle() {
-            viewFlight.className = 'hidden'; 
-            viewIdle.className = 'box'; 
-            lastFetchedCallsign = ""; 
+            viewFlight.className = 'hidden'; viewIdle.className = 'box'; lastFetchedCallsign = ""; 
         }
 
         function showFlight(plane, distance) {
-            viewIdle.className = 'hidden'; 
-            viewFlight.className = 'box';
+            viewIdle.className = 'hidden'; viewFlight.className = 'box';
             
             var rawCallsign = plane.flight ? plane.flight.trim() : '';
             var hexCode = plane.hex ? plane.hex.trim().toUpperCase() : '';
-            
             var callsignText = rawCallsign !== '' ? rawCallsign : hexCode;
             var airlineText = getAirline(rawCallsign);
             
             if (rawCallsign !== '' && rawCallsign !== lastFetchedCallsign) {
                 lastFetchedCallsign = rawCallsign;
                 routeDisplayEl.innerHTML = '...'; 
-                
                 var xhrRoute = new XMLHttpRequest();
                 xhrRoute.open('GET', '/api/ruta?callsign=' + encodeURIComponent(rawCallsign), true);
                 xhrRoute.onload = function() {
                     if (xhrRoute.status === 200) {
                         try {
                             var rData = JSON.parse(xhrRoute.responseText);
-                            if (rData.route && rData.route !== 'N/A') {
-                                routeDisplayEl.innerHTML = '| ' + rData.route; 
-                            } else {
-                                routeDisplayEl.innerHTML = '';
-                            }
+                            if (rData.route && rData.route !== 'N/A') { routeDisplayEl.innerHTML = '| ' + rData.route; } 
+                            else { routeDisplayEl.innerHTML = ''; }
                         } catch(e) { routeDisplayEl.innerHTML = ''; }
                     }
                 };
                 xhrRoute.send();
             } else if (rawCallsign === '') {
-                routeDisplayEl.innerHTML = ''; 
-                lastFetchedCallsign = '';
+                routeDisplayEl.innerHTML = ''; lastFetchedCallsign = '';
             }
 
             var altFt = plane.alt_baro || plane.alt_geom;
@@ -441,9 +418,7 @@
             } else if (spdKmH !== null && spdKmH <= 20) { etaText = 'N/A'; }
             
             airlineEl.innerText = airlineText;
-            // Ícono corregido al avión
             callsignDisplayEl.innerHTML = '<i class="fa-solid fa-plane"></i> ' + callsignText;
-            
             altEl.innerText = alt; spdEl.innerText = spd;
             distEl.innerText = distance.toFixed(1) + ' km'; etaEl.innerText = etaText;
             trackArrowEl.innerHTML = getDirectionArrowHtml(plane.track);
@@ -468,23 +443,13 @@
                 var schedules = [430, 450, 470]; 
                 var nextTrainMins = -1;
                 for (var i = 0; i < schedules.length; i++) {
-                    if (schedules[i] > timeInMinutes) {
-                        nextTrainMins = schedules[i]; break;
-                    }
+                    if (schedules[i] > timeInMinutes) { nextTrainMins = schedules[i]; break; }
                 }
                 
-                if (nextTrainMins === -1 && !MODO_PRUEBA_TREN) {
-                    banner.className = 'hidden'; 
-                    TREN_ACTIVO = false;
-                    return;
-                }
+                if (nextTrainMins === -1 && !MODO_PRUEBA_TREN) { banner.className = 'hidden'; TREN_ACTIVO = false; updateLayout(); return; }
+                if (nextTrainMins === -1 && MODO_PRUEBA_TREN) { nextTrainMins = timeInMinutes + 15; }
                 
-                if (nextTrainMins === -1 && MODO_PRUEBA_TREN) {
-                    nextTrainMins = timeInMinutes + 15;
-                }
-                
-                banner.className = ''; 
-                TREN_ACTIVO = true;
+                banner.className = ''; TREN_ACTIVO = true; updateLayout();
                 
                 var nextH = Math.floor(nextTrainMins / 60) % 24;
                 var nextM = nextTrainMins % 60;
@@ -498,28 +463,19 @@
                     if (xhr.status >= 200 && xhr.status < 300) {
                         try {
                             var data = JSON.parse(xhr.responseText);
-                            var prefix = "";
-                            if (data.status === "DEMORADO" || data.status === "CANCELADO") {
-                                prefix = "⚠️ ";
-                            }
+                            var prefix = (data.status === "DEMORADO" || data.status === "CANCELADO") ? "⚠️ " : "";
                             document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: #FFF; vertical-align: middle;">| ' + prefix + data.status + '</span>';
                         } catch (e) {}
-                    } else {
-                        document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: #FFF; vertical-align: middle;">| API PENDIENTE</span>';
                     }
                 };
-                xhr.onerror = function() {
-                    document.getElementById('train-time').innerHTML = timeStr + ' <span style="font-size: 32px; font-weight: normal; color: #FFF; vertical-align: middle;">| ERROR RED</span>';
-                }
                 xhr.send();
             } else {
-                banner.className = 'hidden'; 
-                TREN_ACTIVO = false;
+                banner.className = 'hidden'; TREN_ACTIVO = false; updateLayout();
             }
         }
-        setInterval(checkTrain, 120000); 
-        checkTrain();
+        setInterval(checkTrain, 120000); checkTrain();
 
+        // LÓGICA REFINADA DE SPOTIFY (Manual, Automático y Búfer)
         function checkSpotify() {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', '/api/spotify', true);
@@ -527,32 +483,65 @@
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         var data = JSON.parse(xhr.responseText);
-                        var banner = document.getElementById('spotify-banner');
-                        
-                        if (data.isPlaying && !TREN_ACTIVO) {
-                            document.getElementById('sp-title').innerText = data.title;
-                            document.getElementById('sp-artist').innerText = data.artist;
-                            banner.className = '';
-                        } else {
-                            banner.className = 'hidden';
+                        if (data.title) {
+                            lastSpotifyData.title = data.title;
+                            lastSpotifyData.artist = data.artist;
                         }
+                        lastSpotifyData.isPlaying = data.isPlaying;
+                        processSpotifyState();
                     } catch (e) {}
                 }
             };
             xhr.send();
         }
-        setInterval(checkSpotify, 10000); 
-        checkSpotify();
+
+        function processSpotifyState() {
+            var banner = document.getElementById('spotify-banner');
+            document.getElementById('sp-title').innerText = lastSpotifyData.title;
+            document.getElementById('sp-artist').innerText = lastSpotifyData.artist;
+
+            if (spotifyForceShow) {
+                clearTimeout(spotifyPauseTimer); spotifyPauseTimer = null;
+                showSpotifyBanner(true);
+            } else if (lastSpotifyData.isPlaying && !TREN_ACTIVO) {
+                clearTimeout(spotifyPauseTimer); spotifyPauseTimer = null;
+                showSpotifyBanner(true);
+            } else {
+                if (!banner.classList.contains('hidden') && !spotifyPauseTimer) {
+                    spotifyPauseTimer = setTimeout(function() {
+                        showSpotifyBanner(false);
+                        spotifyPauseTimer = null;
+                    }, 30000); 
+                }
+            }
+        }
+
+        function showSpotifyBanner(show) {
+            var banner = document.getElementById('spotify-banner');
+            if (show) {
+                banner.classList.remove('hidden');
+                document.getElementById('spotify-toggle').style.color = '#FFF'; 
+            } else {
+                banner.classList.add('hidden');
+                document.getElementById('spotify-toggle').style.color = '#888'; 
+            }
+            updateLayout();
+        }
+
+        function toggleSpotify() {
+            spotifyForceShow = !spotifyForceShow;
+            processSpotifyState();
+        }
 
         function sendSpCmd(action) {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', '/api/spotify-control?action=' + action, true);
             xhr.send();
-            
-            // Opcional: Adelantamos la recarga visual del banner en 1.5 segundos 
-            // para que actualice el título rápido apenas Spotify procesa el cambio.
+            // Aceleramos la actualización visual del reproductor al tocar
             setTimeout(checkSpotify, 1500);
         }
+
+        setInterval(checkSpotify, 10000); checkSpotify();
 
     </script>
 </body>
