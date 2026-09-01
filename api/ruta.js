@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     // Toma la key de Vercel, o usa la que pegues acá abajo entre las comillas
     const API_KEY = process.env.AIRLABS_API_KEY || "TU_API_KEY_ACA"; 
 
-    // El radar suele escupir el código ICAO militar (ej: JES3111)
+    // El radar suele escupir el código ICAO militar  (ej: JES3111)
     const urlIcao = `https://airlabs.co/api/v9/flight?flight_icao=${callsign}&api_key=${API_KEY}`;
 
     try {
