@@ -1,15 +1,12 @@
-// api/spotify-control.js
 export default async function handler(req, res) {
-    const { action } = req.query; // Puede ser: play, pause, next, previous
+    const { action } = req.query; 
     
-    // Tus mismas credenciales de entorno que usás para leer la canción
     const client_id = process.env.SPOTIFY_CLIENT_ID;
     const client_secret = process.env.SPOTIFY_CLIENT_SECRET;
     const refresh_token = process.env.SPOTIFY_REFRESH_TOKEN;
     const basic = Buffer.from(`${client_id}:${client_secret}`).toString('base64');
 
     try {
-        // 1. Pedimos un token de acceso fresco
         const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
             method: 'POST',
             headers: {
@@ -25,16 +22,15 @@ export default async function handler(req, res) {
         const tokenData = await tokenResponse.json();
         const access_token = tokenData.access_token;
 
-        // 2. Ejecutamos la acción
         let endpoint = '';
-        let method = 'POST'; // Next y Previous usan POST
+        let method = 'POST'; 
 
         if (action === 'play') {
             endpoint = 'https://api.spotify.com/v1/me/player/play';
-            method = 'PUT'; // Play usa PUT
+            method = 'PUT'; 
         } else if (action === 'pause') {
             endpoint = 'https://api.spotify.com/v1/me/player/pause';
-            method = 'PUT'; // Pause usa PUT
+            method = 'PUT'; 
         } else if (action === 'next') {
             endpoint = 'https://api.spotify.com/v1/me/player/next';
         } else if (action === 'previous') {
@@ -43,14 +39,23 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Acción no válida' });
         }
 
-        // 3. Enviamos la orden silenciosa a Spotify
-        await fetch(endpoint, {
+        const spotifyRes = await fetch(endpoint, {
             method: method,
             headers: { 'Authorization': `Bearer ${access_token}` }
         });
 
-        return res.status(200).json({ status: 'Comando enviado: ' + action });
+        // Spotify devuelve 204 No Content cuando el comando de reproducción tiene éxito
+        if (spotifyRes.status === 204) {
+            return res.status(200).json({ status: 'Comando ejecutado con éxito: ' + action });
+        } else {
+            const errorData = await spotifyRes.json().catch(() => ({}));
+            return res.status(spotifyRes.status).json({
+                error: 'Spotify rechazó el comando',
+                spotify_status: spotifyRes.status,
+                detalles: errorData
+            });
+        }
     } catch (error) {
-        return res.status(500).json({ error: 'Error al enviar comando' });
+        return res.status(500).json({ error: 'Error del servidor: ' + error.message });
     }
 }
