@@ -23,7 +23,9 @@
         
         .title-container { white-space: normal; width: 100%; padding: 0 20px; box-sizing: border-box; }
         .arrow { font-size: 60px; display: inline-block; vertical-align: middle; margin-left: 15px; }
-        .big { font-size: 38px; margin: 5px 0 5px 0; font-weight: bold; }
+        
+        /* Acomodado para que queden alineados y con la misma jerarquía */
+        .big { font-size: 38px; margin: 5px 0; font-weight: bold; display: inline-block; vertical-align: middle; }
         
         .data-container { margin-top: 20px; width: 94%; margin-left: 3%; white-space: nowrap; }
         .med { display: inline-block; width: 31%; font-size: 18px; vertical-align: top; color: #333; font-weight: bold; line-height: 1; }
@@ -40,7 +42,7 @@
 </head>
 <body>
     <div id="debug"></div>
-    <div id="status-bar" class="big" style="margin-top: 250px;">INITIALIZING...</div>
+    <div id="status-bar" class="big" style="margin-top: 250px; display: block;">INITIALIZING...</div>
 
     <!-- BANNER DINÁMICO TREN DE LA COSTA -->
     <div id="train-banner" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 10px 0; border-bottom: 4px solid #333; z-index: 100;">
@@ -79,15 +81,17 @@
         </div>
     </div>
 
-    <!-- PANTALLA ALERTA: VUELO DETECTADO (< 5 MINUTOS) -->
+    <!-- PANTALLA ALERTA: VUELO DETECTADO -->
     <div id="view-flight" class="hidden box">
         <div class="title-container" style="margin-top: 140px; line-height: 1;">
             <span id="airline" style="font-size: 52px; font-weight: bold; display: inline-block; vertical-align: middle; max-width: 80%; line-height: 1.1;">---</span>
             <span id="track-arrow" class="arrow"><i class="fa-solid fa-arrow-up"></i></span>
         </div>
-        <div id="callsign-display" class="big" style="color: #333; line-height: 1;">---</div>
-        <!-- ACÁ APARECE LA RUTA (AEP -> COR) -->
-        <div id="route-display" style="font-size: 28px; color: #555; margin-bottom: 15px; font-weight: bold; min-height: 30px;"></div>
+        
+        <div style="margin: 5px 0 15px 0;">
+            <div id="callsign-display" class="big" style="color: #333;">---</div>
+            <div id="route-display" class="big" style="color: #333; margin-left: 15px;"></div>
+        </div>
         
         <div class="data-container">
             <div class="med">ALTITUDE<b id="alt">--</b></div>
@@ -137,18 +141,27 @@
 
         var previousDistances = {};
         var planeStates = {}; 
-        var lastFetchedCallsign = ""; // Para no spamear FR24
+        var lastFetchedCallsign = ""; 
 
+        // LISTA VIP (Solo las comerciales que operan en la zona y cruzan seguido)
         var airlines = {
-            'ARG': 'Aerolíneas Argentinas', 'FBZ': 'Flybondi', 'AVA': 'Avianca',
-            'JSM': 'JetSMART', 'LAN': 'LATAM Airlines', 'GLO': 'GOL Linhas Aéreas',
-            'AAL': 'American Airlines', 'DAL': 'Delta Air Lines', 'UAL': 'United Airlines',
-            'IBE': 'Iberia', 'LPE': 'LATAM Perú', 'DSM': 'LADE', 'CMP': 'Copa Airlines',
-            'AZU': 'Azul Linhas Aéreas', 'BOV': 'Boliviana de Aviación', 'SKU': 'Sky Airline',
-            'LRC': 'Avianca', 'JES': 'JetSMART', 'TAM': 'LATAM Brasil', 'LVH': 'Flybondi', 
-            'LVJ': 'JetSMART', 'GLG': 'Avianca Ecuador', 'E06': 'Aeronave Privada',
-            'ITY': 'ITA Airways', 'N45': 'Aeronave Privada', 'SKX': 'Sarpa / Skyway',
-            'FAG': 'Fuerza Aérea Argentina', 'LVC': 'Aeronave Privada'
+            // Locales y Regionales
+            'ARG': 'Aerolíneas Argentinas', 'FBZ': 'Flybondi', 'JSM': 'JetSMART', 
+            'JES': 'JetSMART', 'JAT': 'JetSMART', 'LAN': 'LATAM Airlines', 
+            'LPE': 'LATAM Perú', 'TAM': 'LATAM Brasil', 'LAP': 'LATAM Paraguay', 
+            'LCO': 'LATAM Cargo', 'GLO': 'GOL Linhas Aéreas', 'AZU': 'Azul Linhas Aéreas', 
+            'SKU': 'Sky Airline', 'SKX': 'Sarpa / Skyway', 'BOV': 'Boliviana de Aviación', 
+            'CMP': 'Copa Airlines', 'AVA': 'Avianca', 'LRC': 'Avianca', 'GLG': 'Avianca Ecuador', 
+            'DSM': 'LADE', 'DAP': 'Aerovías DAP',
+            // Internacionales (Ezeiza)
+            'AAL': 'American Airlines', 'DAL': 'Delta Air Lines', 'UAL': 'United Airlines', 
+            'IBE': 'Iberia', 'AEA': 'Air Europa', 'AFR': 'Air France', 'DLH': 'Lufthansa', 
+            'KLM': 'KLM Royal Dutch', 'BWA': 'British Airways', 'ITY': 'ITA Airways', 
+            'THY': 'Turkish Airlines', 'ETH': 'Ethiopian Airlines', 'UAE': 'Emirates', 
+            'QTR': 'Qatar Airways', 'AMX': 'Aeroméxico', 'ACA': 'Air Canada',
+            // Casos manuales ya mapeados anteriormente
+            'FAG': 'Fuerza Aérea Arg.', 'PNA': 'Prefectura Naval', 'PFA': 'Policía Federal', 
+            'GNA': 'Gendarmería', 'E06': 'Aeronave Privada', 'N45': 'Privado (EEUU)'
         };
 
         var colonVisible = true;
@@ -235,11 +248,47 @@
             return '<i class="fa-solid fa-arrow-up fa-rotate-' + rounded + '"></i>';
         }
 
+        // MOTOR INTELIGENTE DE AEROLÍNEAS
         function getAirline(rawCallsign) {
-            if (!rawCallsign) return 'PRIVATE / NO INFO';
-            var clean = rawCallsign.trim();
-            var code = clean.substring(0, 3).toUpperCase();
-            return airlines[code] || 'PRIVATE / NO INFO';
+            if (!rawCallsign) return 'PRIVATE';
+            var clean = rawCallsign.trim().toUpperCase();
+            var code = clean.substring(0, 3);
+            
+            // 1. Está en nuestra Lista VIP
+            if (airlines[code]) return airlines[code];
+            
+            // 2. Es un vuelo comercial que no tenemos en la lista (Patrón: 3 letras + al menos 1 número)
+            if (/^[A-Z]{3}\d/.test(clean)) {
+                return 'Vuelo Comercial (' + code + ')';
+            }
+            
+            // 3. Diccionario Mundial de Matrículas Privadas (Prefijos ITU)
+            if (clean.startsWith('LV')) return 'Privado (ARG)';
+            if (clean.startsWith('LQ')) return 'Estatal (ARG)';
+            if (clean.startsWith('PR') || clean.startsWith('PP') || clean.startsWith('PT') || clean.startsWith('PS')) return 'Privado (BRA)';
+            if (clean.startsWith('CC')) return 'Privado (CHI)';
+            if (clean.startsWith('CX')) return 'Privado (URU)';
+            if (clean.startsWith('ZP')) return 'Privado (PAR)';
+            if (clean.startsWith('CP')) return 'Privado (BOL)';
+            if (clean.startsWith('OB')) return 'Privado (PER)';
+            if (clean.startsWith('HC')) return 'Privado (ECU)';
+            if (clean.startsWith('HK')) return 'Privado (COL)';
+            if (clean.startsWith('YV')) return 'Privado (VEN)';
+            if (clean.startsWith('XA') || clean.startsWith('XB') || clean.startsWith('XC')) return 'Privado (MEX)';
+            if (clean.startsWith('EC')) return 'Privado (ESP)';
+            if (clean.startsWith('EI')) return 'Privado (IRL)';
+            if (clean.startsWith('VH')) return 'Privado (AUS)';
+            
+            // Matrículas que empiezan con una sola letra
+            if (clean.startsWith('N') && !isNaN(clean.charAt(1))) return 'Privado (EEUU)'; 
+            if (clean.startsWith('C') && isNaN(clean.charAt(1))) return 'Privado (CAN)'; 
+            if (clean.startsWith('D') && isNaN(clean.charAt(1))) return 'Privado (ALE)'; 
+            if (clean.startsWith('G') && isNaN(clean.charAt(1))) return 'Privado (UK)';  
+            if (clean.startsWith('F') && isNaN(clean.charAt(1))) return 'Privado (FRA)'; 
+            if (clean.startsWith('I') && isNaN(clean.charAt(1))) return 'Privado (ITA)'; 
+            
+            // 4. Si es indescifrable
+            return 'PRIVATE'; 
         }
 
         function fetchRadar() {
@@ -330,7 +379,7 @@
         function showIdle() {
             viewFlight.className = 'hidden'; 
             viewIdle.className = 'box'; 
-            lastFetchedCallsign = ""; // Reseteamos la ruta si no hay avión
+            lastFetchedCallsign = ""; 
         }
 
         function showFlight(plane, distance) {
@@ -343,10 +392,9 @@
             var callsignText = rawCallsign !== '' ? rawCallsign : hexCode;
             var airlineText = getAirline(rawCallsign);
             
-            // LÓGICA DE RUTA: Solo buscamos si hay patente y si es distinta a la que ya estamos mostrando
             if (rawCallsign !== '' && rawCallsign !== lastFetchedCallsign) {
                 lastFetchedCallsign = rawCallsign;
-                routeDisplayEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size: 20px;"></i>'; // Spinner de carga
+                routeDisplayEl.innerHTML = '...'; 
                 
                 var xhrRoute = new XMLHttpRequest();
                 xhrRoute.open('GET', '/api/ruta?callsign=' + encodeURIComponent(rawCallsign), true);
@@ -354,13 +402,17 @@
                     if (xhrRoute.status === 200) {
                         try {
                             var rData = JSON.parse(xhrRoute.responseText);
-                            routeDisplayEl.innerHTML = rData.route; // Imprime ej: AEP ✈️ COR
+                            if (rData.route && rData.route !== 'N/A') {
+                                routeDisplayEl.innerHTML = '| ' + rData.route; 
+                            } else {
+                                routeDisplayEl.innerHTML = '';
+                            }
                         } catch(e) { routeDisplayEl.innerHTML = ''; }
                     }
                 };
                 xhrRoute.send();
             } else if (rawCallsign === '') {
-                routeDisplayEl.innerHTML = ''; // Si es privado, lo dejamos en blanco
+                routeDisplayEl.innerHTML = ''; 
                 lastFetchedCallsign = '';
             }
 
@@ -381,7 +433,9 @@
             } else if (spdKmH !== null && spdKmH <= 20) { etaText = 'N/A'; }
             
             airlineEl.innerText = airlineText;
-            callsignDisplayEl.innerHTML = '<i class="fa-solid fa-plane"></i> ' + callsignText;            
+            // Ícono corregido al avión
+            callsignDisplayEl.innerHTML = '<i class="fa-solid fa-plane"></i> ' + callsignText;
+            
             altEl.innerText = alt; spdEl.innerText = spd;
             distEl.innerText = distance.toFixed(1) + ' km'; etaEl.innerText = etaText;
             trackArrowEl.innerHTML = getDirectionArrowHtml(plane.track);
