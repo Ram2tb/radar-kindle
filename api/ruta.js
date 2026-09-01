@@ -1,38 +1,38 @@
 export default async function handler(req, res) {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     const { callsign } = req.query;
     if (!callsign) return res.status(200).json({ route: "N/A", debug: "Sin patente" });
 
-    // API interna de la app móvil
-    const url = `https://api.flightradar24.com/common/v1/flight/list.json?query=${callsign}&fetchBy=flight&page=1&limit=1`;
+    // Buscador web en un solo paso
+    const targetUrl = `https://www.flightradar24.com/v1/search/web/find?query=${callsign}&limit=1`;
+    
+    // El proxy definitivo para saltar Cloudflare
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
 
     try {
-        // Disfrazamos a Vercel de celular Android usando la App oficial
-        const response = await fetch(url, {
+        const response = await fetch(proxyUrl, {
             headers: {
-                "User-Agent": "Flightradar24/9.3.0 (Android; 12; Mobile)",
-                "Accept-Encoding": "gzip",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 "Accept": "application/json"
             }
         });
         
-        if (!response.ok) return res.status(200).json({ route: "N/A", debug: `Bloqueo Directo: ${response.status}` });
+        if (!response.ok) return res.status(200).json({ route: "N/A", debug: `Muro final: ${response.status}` });
         
         const data = await response.json();
         
-        if (data.result && data.result.response && data.result.response.data && data.result.response.data.length > 0) {
-            const flight = data.result.response.data[0];
-            const origin = flight.airport?.origin?.code?.iata;
-            const destination = flight.airport?.destination?.code?.iata;
+        if (data.results && data.results.length > 0) {
+            const origin = data.results[0].detail?.schd_from;
+            const destination = data.results[0].detail?.schd_to;
             
             if (origin && destination) {
                 return res.status(200).json({ 
                     route: `${origin} <i class="fa-solid fa-plane" style="font-size: 20px; margin: 0 10px;"></i> ${destination}`,
-                    debug: "Éxito App Android"
+                    debug: "Éxito CorsProxy"
                 });
             }
         }
-        return res.status(200).json({ route: "N/A", debug: "Sin aeropuertos cargados" });
+        return res.status(200).json({ route: "N/A", debug: "Vuelo sin ruta pública" });
     } catch (e) {
         return res.status(200).json({ route: "N/A", debug: `Crash: ${e.message}` });
     }
