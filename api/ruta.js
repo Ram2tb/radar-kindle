@@ -1,55 +1,35 @@
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     const { callsign } = req.query;
-    if (!callsign) return res.status(200).json({ route: "N/A", debug: "Sin patente" });
+    if (!callsign) return res.status(200).json({ route: "N/A" });
 
-    // Toma la key de Vercel, o usa la que pegues acá abajo entre las comillas
     const API_KEY = process.env.AIRLABS_API_KEY || "TU_API_KEY_ACA"; 
-
-    // El radar suele escupir el código ICAO militar  (ej: JES3111)
     const urlIcao = `https://airlabs.co/api/v9/flight?flight_icao=${callsign}&api_key=${API_KEY}`;
 
     try {
         const response = await fetch(urlIcao);
-        
-        // Si pusiste mal la API Key, te va a avisar acá
-        if (!response.ok) return res.status(200).json({ route: "N/A", debug: `AirLabs Error HTTP: ${response.status}` });
+        if (!response.ok) return res.status(200).json({ route: "N/A" }); 
         
         const data = await response.json();
         
-        // Buscamos si AirLabs nos devolvió el origen (dep_iata) y destino (arr_iata)
-        if (data.response) {
-            const origin = data.response.dep_iata;
-            const destination = data.response.arr_iata;
-            
-            if (origin && destination) {
-                return res.status(200).json({ 
-                    route: `${origin} <i class="fa-solid fa-plane" style="font-size: 20px; margin: 0 10px;"></i> ${destination}`,
-                    debug: "Éxito AirLabs (ICAO)"
-                });
-            }
+        if (data.response && data.response.dep_iata && data.response.arr_iata) {
+            return res.status(200).json({ 
+                // Cambiamos el fa-plane por fa-arrow-right-long
+                route: `${data.response.dep_iata} <i class="fa-solid fa-arrow-right-long" style="font-size: 20px; margin: 0 10px;"></i> ${data.response.arr_iata}`
+            });
         }
         
-        // Plan B: Si la aerolínea lo cargó con formato comercial (IATA), probamos de nuevo
-        const urlIata = `https://airlabs.co/api/v9/flight?flight_iata=${callsign}&api_key=${API_KEY}`;
-        const resIata = await fetch(urlIata);
+        const resIata = await fetch(`https://airlabs.co/api/v9/flight?flight_iata=${callsign}&api_key=${API_KEY}`);
         const dataIata = await resIata.json();
         
-        if (dataIata.response) {
-            const origin = dataIata.response.dep_iata;
-            const destination = dataIata.response.arr_iata;
-            if (origin && destination) {
-                return res.status(200).json({ 
-                    route: `${origin} <i class="fa-solid fa-plane" style="font-size: 20px; margin: 0 10px;"></i> ${destination}`,
-                    debug: "Éxito AirLabs (IATA)"
-                });
-            }
+        if (dataIata.response && dataIata.response.dep_iata && dataIata.response.arr_iata) {
+            return res.status(200).json({ 
+                route: `${dataIata.response.dep_iata} <i class="fa-solid fa-arrow-right-long" style="font-size: 20px; margin: 0 10px;"></i> ${dataIata.response.arr_iata}`
+            });
         }
 
-        // Si la API no tiene la ruta (ej: vuelo privado o militar)
-        return res.status(200).json({ route: "N/A", debug: "Vuelo sin ruta en base de datos" });
-        
+        return res.status(200).json({ route: "N/A" });
     } catch (e) {
-        return res.status(200).json({ route: "N/A", debug: `Crash: ${e.message}` });
+        return res.status(200).json({ route: "N/A" });
     }
 }
