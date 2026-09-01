@@ -44,8 +44,7 @@ export default async function handler(req, res) {
             headers: { 'Authorization': `Bearer ${access_token}` }
         });
 
-        // Spotify devuelve 204 No Content cuando el comando de reproducción tiene éxito
-        if (spotifyRes.status === 204) {
+        if (spotifyRes.ok) {
             return res.status(200).json({ status: 'Comando ejecutado con éxito: ' + action });
         } else {
             const errorData = await spotifyRes.json().catch(() => ({}));
