@@ -54,13 +54,21 @@
         </div>
     </div>
 
-    <!-- BANNER SPOTIFY -->
-    <div id="spotify-banner" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 15px 0; border-bottom: 4px solid #333; z-index: 90;">
+   <!-- BANNER SPOTIFY CON CONTROL REMOTO -->
+    <div id="spotify-banner" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; background: #000; color: #FFF; padding: 15px 0 25px 0; border-bottom: 4px solid #333; z-index: 90;">
         <div style="font-size: 40px; font-weight: bold; margin-bottom: 5px; line-height: 1.1; white-space: normal; padding: 0 20px;">
             <i class="fa-brands fa-spotify" style="margin-right: 15px;"></i>
             <span id="sp-title">Buscando...</span>
         </div>
         <div style="font-size: 26px; color: #CCC; margin-top: 5px; line-height: 1; white-space: normal; padding: 0 20px;" id="sp-artist">---</div>
+        
+        <!-- Botones de Control Remoto -->
+        <div style="margin-top: 30px; width: 100%; text-align: center;">
+            <span onclick="sendSpCmd('previous')" style="display: inline-block; width: 22%; font-size: 55px; cursor: pointer; color: #FFF;"><i class="fa-solid fa-backward-step"></i></span>
+            <span onclick="sendSpCmd('play')" style="display: inline-block; width: 22%; font-size: 55px; cursor: pointer; color: #FFF;"><i class="fa-solid fa-play"></i></span>
+            <span onclick="sendSpCmd('pause')" style="display: inline-block; width: 22%; font-size: 55px; cursor: pointer; color: #FFF;"><i class="fa-solid fa-pause"></i></span>
+            <span onclick="sendSpCmd('next')" style="display: inline-block; width: 22%; font-size: 55px; cursor: pointer; color: #FFF;"><i class="fa-solid fa-forward-step"></i></span>
+        </div>
     </div>
 
     <!-- PANTALLA PRINCIPAL: RELOJ Y METEOROLOGÍA -->
@@ -535,6 +543,16 @@
         }
         setInterval(checkSpotify, 10000); 
         checkSpotify();
+
+        function sendSpCmd(action) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/spotify-control?action=' + action, true);
+            xhr.send();
+            
+            // Opcional: Adelantamos la recarga visual del banner en 1.5 segundos 
+            // para que actualice el título rápido apenas Spotify procesa el cambio.
+            setTimeout(checkSpotify, 1500);
+        }
 
     </script>
 </body>
