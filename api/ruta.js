@@ -3,20 +3,20 @@ export default async function handler(req, res) {
     const { callsign } = req.query;
     if (!callsign) return res.status(200).json({ route: "N/A", debug: "Sin patente" });
 
-    // Puerta trasera: Atacamos la API de la app móvil de FR24 en lugar de su web
-    const targetUrl = `https://api.flightradar24.com/common/v1/flight/list.json?query=${callsign}&fetchBy=flight&page=1&limit=1`;
-    
-    // Máscara nueva: Usamos CodeTabs en lugar de AllOrigins
-    const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(targetUrl)}`;
+    // API interna de la app móvil
+    const url = `https://api.flightradar24.com/common/v1/flight/list.json?query=${callsign}&fetchBy=flight&page=1&limit=1`;
 
     try {
-        const response = await fetch(proxyUrl, {
+        // Disfrazamos a Vercel de celular Android usando la App oficial
+        const response = await fetch(url, {
             headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+                "User-Agent": "Flightradar24/9.3.0 (Android; 12; Mobile)",
+                "Accept-Encoding": "gzip",
+                "Accept": "application/json"
             }
         });
         
-        if (!response.ok) return res.status(200).json({ route: "N/A", debug: `Proxy Bloqueado: ${response.status}` });
+        if (!response.ok) return res.status(200).json({ route: "N/A", debug: `Bloqueo Directo: ${response.status}` });
         
         const data = await response.json();
         
@@ -28,11 +28,11 @@ export default async function handler(req, res) {
             if (origin && destination) {
                 return res.status(200).json({ 
                     route: `${origin} <i class="fa-solid fa-plane" style="font-size: 20px; margin: 0 10px;"></i> ${destination}`,
-                    debug: "Éxito CodeTabs"
+                    debug: "Éxito App Android"
                 });
             }
         }
-        return res.status(200).json({ route: "N/A", debug: "Vuelo sin aeropuertos cargados" });
+        return res.status(200).json({ route: "N/A", debug: "Sin aeropuertos cargados" });
     } catch (e) {
         return res.status(200).json({ route: "N/A", debug: `Crash: ${e.message}` });
     }
