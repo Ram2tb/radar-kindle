@@ -9,9 +9,8 @@ export default async function handler(req, res) {
     let tituloEvento = "";
     let horaEvento = "";
 
-    // 1. RASTREADOR DE PARTIDOS (API Oculta de ESPN - Sin Key)
+    // 1. RASTREADOR DE PARTIDOS (API Oculta de ESPN)
     try {
-        // ID 16 es River Plate en ESPN
         const espnUrl = `https://site.api.espn.com/apis/site/v2/sports/soccer/arg.1/teams/16/schedule`;
         const espnRes = await fetch(espnUrl);
         if (espnRes.ok) {
@@ -20,17 +19,19 @@ export default async function handler(req, res) {
             
             for (let i = 0; i < eventos.length; i++) {
                 const partido = eventos[i];
-                const fechaPartido = partido.date.split('T')[0];
                 
-                if (fechaPartido === hoy) {
+                // CORRECCIÓN: Convertimos la fecha UTC de ESPN a la hora local de Buenos Aires
+                const fechaUTC = new Date(partido.date);
+                const fechaPartidoLocal = formatter.format(fechaUTC);
+                
+                if (fechaPartidoLocal === hoy) {
                     const competidores = partido.competitions[0].competitors;
                     const esLocal = competidores.find(c => c.team.id === "16")?.homeAway === "home";
                     
-                    // Si juega hoy y es local (en el Monumental)
                     if (esLocal) {
                         eventoHoy = true;
                         tituloEvento = partido.name;
-                        horaEvento = new Date(partido.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' });
+                        horaEvento = fechaUTC.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' });
                         return res.status(200).json({ hayEvento: true, titulo: tituloEvento, hora: horaEvento });
                     }
                 }
@@ -40,8 +41,7 @@ export default async function handler(req, res) {
         console.log("Fallo ESPN:", e);
     }
 
-    // 2. SCRAPER DE RECITALES (Expresiones Regulares)
-    // Usamos allorigins para saltar bloqueos básicos de Vercel
+    // 2. SCRAPER DE RECITALES
     try {
         const agendaUrl = `https://api.allorigins.win/get?url=${encodeURIComponent('https://recitales.com.ar/')}`;
         const agendaRes = await fetch(agendaUrl);
@@ -50,9 +50,9 @@ export default async function handler(req, res) {
             const agendaData = await agendaRes.json();
             const html = agendaData.contents.toLowerCase();
             
-            // Busca si existe "monumental" y la fecha de hoy cerca en el texto
-            // (Esta es la versión básica del scraper, si la web cambia hay que ajustar la búsqueda)
-            if (html.includes("monumental") && html.includes(hoy.split('-')[2])) { 
+            // Busca el día de hoy (ej: "25") y la palabra monumental
+            const diaHoy = hoy.split('-')[2];
+            if (html.includes("monumental") && html.includes(diaHoy)) { 
                 return res.status(200).json({ 
                     hayEvento: true, 
                     titulo: "Recital Detectado", 
