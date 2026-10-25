@@ -185,14 +185,16 @@
             'GNA': 'Gendarmería'
         };
 
-        // Función que empuja el contenido hacia abajo según los banners activos
+       // Función que empuja el contenido hacia abajo según los banners activos
         function updateLayout() {
             var trainActive = !document.getElementById('train-banner').classList.contains('hidden');
             var spotActive = !document.getElementById('spotify-banner').classList.contains('hidden');
+            var monActive = !document.getElementById('monumental-banner').classList.contains('hidden');
             
             var offset = 0;
             if (trainActive) offset += 95; 
             if (spotActive) offset += 115; 
+            if (monActive) offset += 115; // <--- Acá sumamos el espacio del Monumental
 
             var idleTop = 170 - offset;
             var flightTop = 140 - offset;
@@ -553,7 +555,56 @@
         }
 
         setInterval(checkSpotify, 10000); checkSpotify();
+// VARIABLES GLOBALES MONUMENTAL (Pegar arriba con las otras variables)
+        var monumentalForceHide = false; 
+        var lastMonumentalData = { hayEvento: false, titulo: '', hora: '' };
 
+        // LÓGICA MONUMENTAL (Pegar al fondo)
+        function checkMonumental() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/monumental', true);
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        var data = JSON.parse(xhr.responseText);
+                        lastMonumentalData.hayEvento = data.hayEvento;
+                        if (data.hayEvento) {
+                            lastMonumentalData.titulo = data.titulo;
+                            lastMonumentalData.hora = data.hora;
+                        }
+                        processMonumentalState();
+                    } catch (e) {}
+                }
+            };
+            xhr.send();
+        }
+
+        function processMonumentalState() {
+            var banner = document.getElementById('monumental-banner');
+            var toggle = document.getElementById('monumental-toggle');
+            
+            if (lastMonumentalData.hayEvento && !monumentalForceHide) {
+                document.getElementById('monumental-title').innerText = lastMonumentalData.titulo;
+                document.getElementById('monumental-time').innerText = lastMonumentalData.hora;
+                banner.classList.remove('hidden');
+                toggle.style.color = '#FFF'; 
+            } else {
+                banner.classList.add('hidden');
+                toggle.style.color = '#888'; 
+            }
+            // Importante: acordate de actualizar tu función updateLayout() para que sume 115px al offset si monActive es true.
+            updateLayout();
+        }
+
+        function toggleMonumental() {
+            if (lastMonumentalData.hayEvento) {
+                monumentalForceHide = !monumentalForceHide;
+                processMonumentalState();
+            }
+        }
+        
+        // Consultar el estadio 1 vez por hora para cuidar la batería y no hacer spam
+        setInterval(checkMonumental, 3600000); checkMonumental();
     </script>
 </body>
 </html>
