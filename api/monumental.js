@@ -1,73 +1,72 @@
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     
-    const options = { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' };
-    const formatter = new Intl.DateTimeFormat('en-CA', options);
-    const hoy = formatter.format(new Date()); 
-    
     try {
-        // 1. RASTREADOR DE PARTIDOS (Promiedos.com.ar)
-        // Usamos allorigins para evadir el bloqueo antibots (Cloudflare) de Promiedos
-        const promiedosUrl = `https://api.allorigins.win/get?url=${encodeURIComponent('https://www.promiedos.com.ar/')}`;
+        // disableCache=true es CRÍTICO para que no nos devuelva la página de ayer
+        const promiedosUrl = `https://api.allorigins.win/get?url=${encodeURIComponent('https://www.promiedos.com.ar/')}&disableCache=true`;
         const promiedosRes = await fetch(promiedosUrl);
         
         if (promiedosRes.ok) {
             const promiedosData = await promiedosRes.json();
             const html = promiedosData.contents;
             
-            // Cortamos todo el HTML agrupando por filas de tablas
+            // Si Cloudflare de Promiedos nos bloqueó, lo detectamos acá
+            if (html.includes("Just a moment...") || html.includes("Cloudflare")) {
+                return res.status(200).json({ hayEvento: false, debug: "Bloqueado por el escudo anti-bots de Cloudflare." });
+            }
+            
             const filas = html.match(/<tr[^>]*>.*?<\/tr>/gis) || [];
+            let filaSospechosa = "No se encontró la palabra River en toda la página";
             
             for (let fila of filas) {
-                // Filtramos rápido: si la fila no dice River, la ignoramos
-                if (fila.includes("River")) {
+                if (fila.includes("River Plate") || fila.includes("River")) {
+                    // Limpiamos TODO el código HTML de la fila para dejar el texto crudo
+                    // Ejemplo de lo que queda: " 19:15 River Plate Racing Club "
+                    const textoLimpio = fila.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                    filaSospechosa = textoLimpio;
                     
-                    // Extraemos las columnas específicas de Promiedos
-                    const horaMatch = fila.match(/<td[^>]*class="[^"]*game-time[^"]*"[^>]*>(.*?)<\/td>/is) || fila.match(/>(\d{2}:\d{2})</);
-                    const localMatch = fila.match(/<td[^>]*class="[^"]*game-t1[^"]*"[^>]*>(.*?)<\/td>/is);
-                    const visitanteMatch = fila.match(/<td[^>]*class="[^"]*game-t2[^"]*"[^>]*>(.*?)<\/td>/is);
+                    const horaMatch = textoLimpio.match(/\d{2}:\d{2}/);
+                    const horaStr = horaMatch ? horaMatch[0] : "19:15";
                     
-                    if (localMatch && visitanteMatch) {
-                        // Limpiamos los logos y etiquetas HTML para dejar solo el texto
-                        const local = localMatch[1].replace(/<[^>]+>/g, '').trim();
-                        const visitante = visitanteMatch[1].replace(/<[^>]+>/g, '').trim();
+                    // Si el texto de River aparece ANTES que el del rival en el string, es local
+                    const indexRiver = textoLimpio.indexOf("River");
+                    
+                    // Verificamos si juega contra Racing hoy
+                    if (textoLimpio.includes("Racing")) {
+                        const indexRacing = textoLimpio.indexOf("Racing");
                         
-                        // Verificamos la localía pura
-                        if (local.includes("River")) {
-                            const horaStr = horaMatch ? horaMatch[1].replace(/<[^>]+>/g, '').trim() : "19:15";
+                        if (indexRiver !== -1 && indexRacing !== -1 && indexRiver < indexRacing) {
                             return res.status(200).json({ 
                                 hayEvento: true, 
-                                titulo: `${local} vs ${visitante}`, 
-                                hora: horaStr 
+                                titulo: "River vs Racing", 
+                                hora: horaStr,
+                                debug: "Partido detectado por Scraper"
+                            });
+                        }
+                    } else {
+                        // Lógica general por si juega contra otro equipo y la fecha coincide
+                        // Buscamos cualquier otro texto que parezca un equipo
+                        if (indexRiver !== -1 && indexRiver < 15) { // Si River está al principio del texto
+                            return res.status(200).json({ 
+                                hayEvento: true, 
+                                titulo: "River Plate (Local)", 
+                                hora: horaStr,
+                                debug: textoLimpio
                             });
                         }
                     }
                 }
             }
-        }
-        
-        // 2. SCRAPER DE RECITALES (recitales.com.ar)
-        // Solo llega acá si Promiedos no detectó partido hoy
-        const agendaUrl = `https://api.allorigins.win/get?url=${encodeURIComponent('https://recitales.com.ar/')}`;
-        const agendaRes = await fetch(agendaUrl);
-        
-        if (agendaRes.ok) {
-            const agendaData = await agendaRes.json();
-            const htmlReci = agendaData.contents.toLowerCase();
-            const diaHoy = hoy.split('-')[2];
             
-            if (htmlReci.includes("monumental") && htmlReci.includes(diaHoy)) { 
-                return res.status(200).json({ 
-                    hayEvento: true, 
-                    titulo: "Recital Detectado", 
-                    hora: "Puertas: 17:00 (Est.)" 
-                });
-            }
+            return res.status(200).json({ 
+                hayEvento: false, 
+                debug: "Fallo en la lectura", 
+                loQueVioElScraper: filaSospechosa 
+            });
         }
-        
     } catch (e) {
         return res.status(200).json({ hayEvento: false, error: e.message });
     }
 
-    return res.status(200).json({ hayEvento: false });
+    return res.status(200).json({ hayEvento: false, debug: "No llegó a ejecutar el código" });
 }
