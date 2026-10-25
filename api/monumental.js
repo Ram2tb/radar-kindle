@@ -1,60 +1,33 @@
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     
-    const options = { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' };
-    const formatter = new Intl.DateTimeFormat('en-CA', options);
-    const hoy = formatter.format(new Date()); // Ej: "2026-10-25"
-    const anioActual = hoy.substring(0, 4); // Extrae "2026" automáticamente
-    
-    // 1. BÚSQUEDA AUTOMÁTICA DE PARTIDOS (API-Football)
     const API_KEY = process.env.FOOTBALL_API_KEY;
-    const RIVER_ID = 435; // ID oficial de River Plate
+    const RIVER_ID = 435; // River Plate
 
-    if (API_KEY) {
-        try {
-            // Se inyecta &season= y el año dinámico en la URL
-            const url = `https://v3.football.api-sports.io/fixtures?team=${RIVER_ID}&date=${hoy}&season=${anioActual}&timezone=America/Argentina/Buenos_Aires`;
-            const response = await fetch(url, {
-                headers: {
-                    "x-apisports-key": API_KEY
-                }
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                
-                if (data.response && data.response.length > 0) {
-                    const partido = data.response[0];
-                    
-                    // Verificar si River juega de local en el Monumental
-                    if (partido.teams.home.id === RIVER_ID) {
-                        const fechaUTC = new Date(partido.fixture.date);
-                        const horaLocal = fechaUTC.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' });
-                        
-                        return res.status(200).json({ 
-                            hayEvento: true, 
-                            titulo: `${partido.teams.home.name} vs ${partido.teams.away.name}`, 
-                            hora: horaLocal 
-                        });
-                    }
-                }
-            }
-        } catch (e) {
-            console.log("Fallo API Football:", e);
-        }
+    if (!API_KEY) return res.status(200).json({ error: "Falta API KEY" });
+
+    try {
+        // Pedimos los próximos 5 partidos directamente
+        const url = `https://v3.football.api-sports.io/fixtures?team=${RIVER_ID}&next=5&timezone=America/Argentina/Buenos_Aires`;
+        const response = await fetch(url, {
+            headers: { "x-apisports-key": API_KEY }
+        });
+        
+        const data = await response.json();
+        
+        return res.status(200).json({
+            diagnostico: "BUSCANDO PROXIMOS 5 PARTIDOS (Sin filtro de fecha)",
+            urlConsultada: url,
+            partidosEncontrados: data.response.map(p => ({
+                fechaAPI: p.fixture.date,
+                local: p.teams.home.name,
+                visitante: p.teams.away.name,
+                torneo: p.league.name,
+                temporada: p.league.season
+            }))
+        });
+
+    } catch (e) {
+        return res.status(200).json({ error: "Fallo", detalle: e.message });
     }
-
-    // 2. DICCIONARIO MANUAL DE RECITALES (Plan B)
-    const recitales = {
-        "2026-11-20": "Recital: Iron Maiden",
-        "2026-12-05": "Recital: Los Piojos",
-        "2026-12-06": "Recital: Los Piojos"
-    };
-
-    if (recitales[hoy]) {
-        return res.status(200).json({ hayEvento: true, titulo: recitales[hoy], hora: "Puertas: 17:00" });
-    }
-
-    // Si no hay partido ni recital hoy, devolvemos false
-    return res.status(200).json({ hayEvento: false });
 }
